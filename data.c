@@ -79,6 +79,7 @@ volatile bool simulationRunning = FALSE;
 volatile int powerState = POWER_OFF;
 volatile int runState = STOPPED_STATE;
 volatile int lastRunState = STOPPED_STATE;
+volatile int fpMode = FP_EXP_COMPARE;
 volatile int ioState = STOPPED_IO_STATE;
 volatile int ioType = NO_IO;
 volatile int ioWait = 0;
@@ -210,7 +211,7 @@ const int cycleLights[NUM_CYCLES] =
 
 int opCode = 0;
 const int opCycles[NUM_OPCYCLES] =
-    {0,  0,  0,  0,  0,  0,  0,  0,  0,  0,   //    -, FADD, FSUB, FMUL,    -,  FSL,  TFL, BTFL,  FSR, FDIV
+    {0, 11, 11, 11,  0, 24, 26, 15, 24, 11,   //    -, FADD, FSUB, FMUL,    -,  FSL,  TFL, BTFL,  FSR, FDIV
      0, 11, 11, 32, 11, 26, 26, 15, 32, 11,   //    -,   AM,   SM,   MM,   CM,  TDM,  TFM,  BTM,  LDM,   DM
      0, 11, 11, 32, 11, 26, 26, 15, 32, 11,   //    -,    A,    S,    M,    C,   TD,   TF,   BT,   LD,    D
      0, 26, 28, 28, 56, 30, 31, 31, 30, 30,   //    -,   TR,   SF,   CF,    K,   DN,   RN,   RA,   WN,   WA

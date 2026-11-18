@@ -134,6 +134,7 @@ extern volatile bool simulationRunning;
 extern volatile int powerState;
 extern volatile int runState;
 extern volatile int lastRunState;
+extern volatile int fpMode;
 extern volatile int ioState;
 extern volatile int ioType;
 extern volatile int ioWait;

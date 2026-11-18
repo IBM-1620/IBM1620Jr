@@ -23,7 +23,7 @@
 // Simulator version
 
 #define SIM_VERSION_MAJOR 1
-#define SIM_VERSION_MINOR 0
+#define SIM_VERSION_MINOR 1 
 
 // Compile options
 
@@ -92,6 +92,39 @@
 #define WNCD_IO   14
 #define WACD_IO   15
 
+// fpMode values
+
+#define FP_EXP_COMPARE          0
+#define FP_SCAN_Q               1
+#define FP_EXP_TRANSMIT         2
+#define FP_SCAN_P               3
+#define FP_RESULT_TRANSMIT      4
+#define FP_SHIFT_RIGHT          5
+#define FP_ZERO_FILL_R          6
+#define FP_FRACTION_ADD         7
+#define FP_EXP_MODIFY_ENTRY     8
+#define FP_EXP_MODIFY           9
+#define FP_EXP_MODIFY_EXIT     10
+#define FP_SHIFT_R1FILL        11
+#define FP_DIGIT_FORCE         12
+#define FP_SCAN_ZERO           13
+#define FP_SHIFT_LEFT          14
+#define FP_ZERO_FILL_L         15
+#define FP_EXP_ADD             16
+#define FP_MULTIPLY            17
+#define FP_PRODUCT_TRANSMIT    18
+#define FP_FRACTION_COMPARE    19
+#define FP_FALSE_TRANSMIT      20
+#define FP_LOAD_DIVIDEND_ENTRY 21
+#define FP_LOAD_DIVIDEND       22
+#define FP_DIVIDE_ENTRY        23
+#define FP_DIVIDE              24
+#define FP_FSR_TRANSMIT        25
+#define FP_FSR_ZERO_FILL       26
+#define FP_FSL_SCAN            27
+#define FP_FSL_TRANSMIT        28
+#define FP_FSL_ZERO_FILL       29
+
 // lightMode values
 
 #define REALISTIC_LIGHTS 0
@@ -123,14 +156,14 @@
 
 // Opcodes
 
-#define FADD_OPCODE 01
-#define FSUB_OPCODE 02
-#define FMUL_OPCODE 03
-#define FSL_OPCODE  05
-#define TFL_OPCODE  06
-#define BTFL_OPCODE 07
-#define FSR_OPCODE  08
-#define FDIV_OPCODE 09
+#define FADD_OPCODE  1
+#define FSUB_OPCODE  2
+#define FMUL_OPCODE  3
+#define FSL_OPCODE   5
+#define TFL_OPCODE   6
+#define BTFL_OPCODE  7
+#define FSR_OPCODE   8
+#define FDIV_OPCODE  9
 #define AM_OPCODE   11
 #define SM_OPCODE   12
 #define MM_OPCODE   13
@@ -241,7 +274,7 @@
 #define NUM_ALPHAMERIC_CHARS 256
 #define NUM_CMEM_FILES       10
 #define NUM_CYCLES           57
-#define NUM_TRIGGERS         61
+#define NUM_TRIGGERS         77
 #define NUM_TRIGGER_LIGHTS   54
 #define NUM_MARS             12
 #define NUM_OPCYCLES         100
@@ -469,13 +502,29 @@ typedef unsigned char memDigit;
 
 // Internal Triggers (not displayed)
 
-#define I_CYCLE_ENTRY_TRIGGER  54
-#define E_CYCLE_ENTRY_TRIGGER  55
-#define SAVE_CTRL_TRIGGER      56
-#define INSERT_TRIGGER         57
-#define MULTIPLY_UNITS_TRIGGER 58
-#define NEXT_IA_TRIGGER        59
-#define P_Q_TRIGGER            60
+#define I_CYCLE_ENTRY_TRIGGER   54
+#define E_CYCLE_ENTRY_TRIGGER   55
+#define SAVE_CTRL_TRIGGER       56
+#define BT_BTM_BTFL_TRIGGER     57
+#define INSERT_TRIGGER          58
+#define MULTIPLY_UNITS_TRIGGER  59
+#define NEXT_IA_TRIGGER         60
+#define P_Q_TRIGGER             61
+#define SCAN_MINUS_TRIGGER      62
+#define SCAN_Q_EXIT_TRIGGER     63
+#define D_GT_99_TRIGGER         64
+#define CNTR_COMP_TRIGGER       65
+#define HI_ORDER_ZERO_TRIGGER   66
+#define NORM_SHIFT_R_TRIGGER    67
+#define SIG_DIGIT_TRIGGER       68
+#define FORCE_FLAG_1_TRIGGER    69
+#define HP_AUX_TRIGGER          70
+#define L1_MODULO_TRIGGER       71
+#define L2_MODULO_TRIGGER       72
+#define SCAN_Q_LATCH            73
+#define EXP_MODIFY_REQD_TRIGGER 74
+#define MULT_CORRECT_TRIGGER    75
+#define PE_ZERO_TRIGGER         76
 
 
 // =================================  Hardware Offsets  =================================

@@ -198,7 +198,7 @@ void *Simulator(void *arg) {
         (void)memcpy((void *)&cycleTriggers, (void *)&triggers, sizeof(triggers));
 
         // Special built-in program load
-        if ((powerState == POWER_OFF) && TestSwitch(RESET_SWITCH)) {
+        if ((powerState == POWER_OFF) && !TestSwitch(SPARE_1_SWITCH) && TestSwitch(RESET_SWITCH)) {
             temp = (TestSwitch(PROGRAM_1_SWITCH) ? 0x8 : 0) | (TestSwitch(PROGRAM_2_SWITCH) ? 0x4 : 0) |
                    (TestSwitch(PROGRAM_3_SWITCH) ? 0x2 : 0) | (TestSwitch(PROGRAM_4_SWITCH) ? 0x1 : 0);
             cmemCount = 1;
@@ -420,7 +420,7 @@ void *Simulator(void *arg) {
         }
 
         // Process START switch
-        if (TestSwitch(START_SWITCH) && ((runState == STOPPED_STATE) ||
+        if (TestSwitch(START_SWITCH) && ((runState == STOPPED_STATE)      ||
                                          (runState == SINGLE_CYCLE_STATE) ||
                                          (runState == SINGLE_INSTRUCTION_STATE))) {
             runState = RUNNING_STATE;
@@ -429,8 +429,8 @@ void *Simulator(void *arg) {
         }
 
         // Process STOP / SIE switch
-        if (TestSwitch(STOP_SIE_SWITCH) && ((runState == STOPPED_STATE) ||
-                                            (runState == SINGLE_CYCLE_STATE) ||
+        if (TestSwitch(STOP_SIE_SWITCH) && ((runState == STOPPED_STATE)            ||
+                                            (runState == SINGLE_CYCLE_STATE)       ||
                                             (runState == SINGLE_INSTRUCTION_STATE) ||
                                             (runState == RUNNING_STATE))) {
             runState = SINGLE_INSTRUCTION_STATE;
@@ -443,8 +443,8 @@ void *Simulator(void *arg) {
         }
 
         // Process INSTANT STOP / SCE switch
-        if (TestSwitch(INSTANT_STOP_SCE_SWITCH) && ((runState == STOPPED_STATE) ||
-                                                    (runState == SINGLE_CYCLE_STATE) ||
+        if (TestSwitch(INSTANT_STOP_SCE_SWITCH) && ((runState == STOPPED_STATE)            ||
+                                                    (runState == SINGLE_CYCLE_STATE)       ||
                                                     (runState == SINGLE_INSTRUCTION_STATE) ||
                                                     (runState == RUNNING_STATE))) {
             runState = SINGLE_CYCLE_STATE;
@@ -594,6 +594,25 @@ void *Simulator(void *arg) {
             SetTrigger(INCR_TRIGGER, ON);
             SetTrigger(PLUS_2_TRIGGER, OFF);
             SetTrigger(BYPASS_TRIGGER, OFF);
+            SetTrigger(OFLO_UNFLO_TRIGGER, OFF);
+            SetTrigger(OFLO_CORR_TRIGGER, OFF);
+            SetTrigger(UNFLO_ZERO_TRIGGER, OFF);
+            SetTrigger(FP_EXIT_TRIGGER, OFF);
+            SetTrigger(EXP_MODIFY_REQD_TRIGGER, OFF);
+            SetTrigger(MULT_CORRECT_TRIGGER, OFF);
+            SetTrigger(PE_ZERO_TRIGGER, OFF);
+            SetTrigger(SCAN_MINUS_TRIGGER, OFF);
+            SetTrigger(SCAN_Q_EXIT_TRIGGER, OFF);
+            SetTrigger(D_GT_99_TRIGGER, OFF);
+            SetTrigger(CNTR_COMP_TRIGGER, OFF);
+            SetTrigger(HI_ORDER_ZERO_TRIGGER, OFF);
+            SetTrigger(NORM_SHIFT_R_TRIGGER, OFF);
+            SetTrigger(SIG_DIGIT_TRIGGER, OFF);
+            SetTrigger(FORCE_FLAG_1_TRIGGER, OFF);
+            SetTrigger(HP_AUX_TRIGGER, OFF);
+            SetTrigger(L1_MODULO_TRIGGER, OFF);
+            SetTrigger(L2_MODULO_TRIGGER, OFF);
+            SetTrigger(SCAN_Q_LATCH, OFF);
             ClearMQR();
             ClearSABR();
         }
@@ -602,19 +621,36 @@ void *Simulator(void *arg) {
         if (TestTrigger(E_CYCLE_ENTRY_TRIGGER)) {
             SetTrigger(E_CYCLE_ENTRY_TRIGGER, OFF);
 
-            if ((opCode == A_OPCODE)  || (opCode == AM_OPCODE)  || (opCode == S_OPCODE)   || (opCode == SM_OPCODE) ||
-                (opCode == C_OPCODE)  || (opCode == CM_OPCODE)  || (opCode == D_OPCODE)   || (opCode == DM_OPCODE) ||
-                (opCode == TF_OPCODE) || (opCode == TFM_OPCODE) || (opCode == TNS_OPCODE) || (opCode == TNF_OPCODE)) {
+            if ((opCode == A_OPCODE)    || (opCode == AM_OPCODE)   || (opCode == S_OPCODE)    || (opCode == SM_OPCODE)   ||
+                (opCode == C_OPCODE)    || (opCode == CM_OPCODE)   || (opCode == D_OPCODE)    || (opCode == DM_OPCODE)   ||
+                (opCode == TF_OPCODE)   || (opCode == TFM_OPCODE)  || (opCode == TNS_OPCODE)  || (opCode == TNF_OPCODE)  ||
+                (opCode == FADD_OPCODE) || (opCode == FSUB_OPCODE) || (opCode == FMUL_OPCODE) || (opCode == FDIV_OPCODE) ||
+                (opCode == FSL_OPCODE)  || (opCode == FSR_OPCODE)  || (opCode == TFL_OPCODE)) {
                 SetTrigger(FIRST_CYCLE_TRIGGER, ON);
             }
 
-            if ((opCode == D_OPCODE) || (opCode == DM_OPCODE)) {
+            if ((opCode == D_OPCODE) || (opCode == DM_OPCODE) || (opCode == FDIV_OPCODE)) {
                 SetTrigger(DIV_1_CYCLE_TRIGGER, ON);
             }
 
-            if ((opCode == BT_OPCODE) || (opCode == BTM_OPCODE) || (opCode == A_OPCODE) || (opCode == AM_OPCODE) ||
-                (opCode == S_OPCODE)  || (opCode == SM_OPCODE)  || (opCode == C_OPCODE) || (opCode == CM_OPCODE) ||
-                (opCode == M_OPCODE)  || (opCode == MM_OPCODE)  || (opCode == D_OPCODE) || (opCode == DM_OPCODE)) {
+            if ((opCode == FADD_OPCODE) || (opCode == FSUB_OPCODE)) {
+                fpMode = FP_EXP_COMPARE;
+
+            } else if ((opCode == FMUL_OPCODE) || (opCode == FDIV_OPCODE)) {
+                fpMode = FP_EXP_ADD;
+
+            } else if (opCode == FSR_OPCODE) {
+                fpMode = FP_FSR_TRANSMIT;
+
+            } else if (opCode == FSL_OPCODE) {
+                fpMode = FP_FSL_SCAN;
+            }
+
+            if ((opCode == BT_OPCODE)   || (opCode == BTM_OPCODE)  || (opCode == A_OPCODE)    || (opCode == AM_OPCODE)   ||
+                (opCode == S_OPCODE)    || (opCode == SM_OPCODE)   || (opCode == C_OPCODE)    || (opCode == CM_OPCODE)   ||
+                (opCode == M_OPCODE)    || (opCode == MM_OPCODE)   || (opCode == D_OPCODE)    || (opCode == DM_OPCODE)   ||
+                (opCode == FADD_OPCODE) || (opCode == FSUB_OPCODE) || (opCode == FMUL_OPCODE) || (opCode == FDIV_OPCODE) ||
+                (opCode == FSL_OPCODE)  || (opCode == FSR_OPCODE)  || (opCode == BTFL_OPCODE)) {
                 SetTrigger(INCR_TRIGGER, OFF);
                 SetTrigger(DECR_TRIGGER, ON);
                 SetTrigger(PLUS_2_TRIGGER, OFF);
@@ -626,13 +662,19 @@ void *Simulator(void *arg) {
                 SetTrigger(PLUS_2_TRIGGER, OFF);
             }
 
-            if ((opCode == A_OPCODE) || (opCode == AM_OPCODE) || (opCode == S_OPCODE) || (opCode == SM_OPCODE) ||
-                (opCode == C_OPCODE) || (opCode == CM_OPCODE) || (opCode == D_OPCODE) || (opCode == DM_OPCODE)) {
+            if ((opCode == A_OPCODE)    || (opCode == AM_OPCODE)   || (opCode == S_OPCODE)    || (opCode == SM_OPCODE) ||
+                (opCode == C_OPCODE)    || (opCode == CM_OPCODE)   || (opCode == D_OPCODE)    || (opCode == DM_OPCODE) ||
+                (opCode == FADD_OPCODE) || (opCode == FSUB_OPCODE) || (opCode == FMUL_OPCODE) || (opCode == FDIV_OPCODE)) {
                 SetTrigger(HP_TRIGGER, ON);
                 SetTrigger(EZ_TRIGGER, ON);
             }
 
-            if ((opCode == S_OPCODE) || (opCode == SM_OPCODE) || (opCode == C_OPCODE) || (opCode == CM_OPCODE)) {
+            if ((opCode == S_OPCODE)    || (opCode == SM_OPCODE)   || (opCode == C_OPCODE) || (opCode == CM_OPCODE) ||
+                (opCode == FADD_OPCODE) || (opCode == FSUB_OPCODE) || (opCode == FDIV_OPCODE)) {
+                SetTrigger(TC_1_TRIGGER, OFF);
+            }
+
+            if (opCode == TNF_OPCODE) {
                 SetTrigger(TC_1_TRIGGER, OFF);
             }
 
@@ -733,7 +775,7 @@ void *Simulator(void *arg) {
         // Execute one cycle
         switch (cycle) {
 
-            case 1:    // I-1
+            case 1:    // I-1  <=  H, NOP
 
                 // Instructions must start on even address within MEMORY_SIZE
                 if (!ValidEvenAddress(mars[IR1_MAR].value)) {
@@ -946,17 +988,17 @@ void *Simulator(void *arg) {
 
             case 9:    // T-1
 
-                (void)printf("Bad cycle: T-1\n");
+                (void)printf("Unused cycle: T-1\n");
                 runState = CHECK_STOP_STATE;
                 break;
 
             case 10:    // T-2
 
-                (void)printf("Bad cycle: T-2\n");
+                (void)printf("Unused cycle: T-2\n");
                 runState = CHECK_STOP_STATE;
                 break;
 
-            case 11:    // E-11
+            case 11:    // E-11  <=  A, AM, C, CM, D, DM, FADD, FDIV, FMUL, FSUB, S, SM
 
                 // Read a Q field digit
                 if (!ReadMemory(OR1_MAR)) break;
@@ -982,7 +1024,7 @@ void *Simulator(void *arg) {
                         SetTrigger(DIGIT_TRIGGER, ON);
                     }
 
-                } else if ((opCode == D_OPCODE) || (opCode == DM_OPCODE)) {
+                } else if ((opCode == D_OPCODE) || (opCode == DM_OPCODE) || ((opCode == FDIV_OPCODE) && (fpMode == FP_DIVIDE))) {
                     SetTrigger(CARRY_OUT_TRIGGER, OFF);
                     if (mdr.digit.flag && !TestTrigger(FIRST_CYCLE_TRIGGER)) {
                         SetTrigger(FIELD_MK_1_TRIGGER, ON);
@@ -995,8 +1037,59 @@ void *Simulator(void *arg) {
                     } else {
                         SetTrigger(TC_1_TRIGGER, OFF);
                     }
+
+                } else if ((opCode == FADD_OPCODE) || (opCode == FSUB_OPCODE)) {
+                    SetTrigger(CARRY_OUT_TRIGGER, OFF);
+                    if ((fpMode == FP_FRACTION_ADD) && TestTrigger(SCAN_Q_LATCH)) {
+                        if (mdr.digit.flag) {
+                            SetTrigger(FIELD_MK_1_TRIGGER, ON);
+                        }
+                        if (TestTrigger(FIRST_CYCLE_TRIGGER) && TestTrigger(SCAN_MINUS_TRIGGER)) {
+                            SetTrigger(TC_1_TRIGGER, !TestTrigger(TC_1_TRIGGER));
+                        }
+                    } else {
+                        if (mdr.digit.flag && !TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                            SetTrigger(FIELD_MK_1_TRIGGER, ON);
+                        }
+                        if (fpMode == FP_EXP_COMPARE) {
+                            if (TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                                SaveMAR(OR4_MAR);
+                                if (mdr.digit.flag) {
+                                    SetTrigger(TC_1_TRIGGER, ON);
+                                }
+                            }
+                        } else if (fpMode == FP_FRACTION_ADD) {
+                            if (mdr.digit.flag && TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                                SetTrigger(TC_1_TRIGGER, (opCode == FSUB_OPCODE) ? ON : OFF);
+                            }
+                        }
+                    }
+
+                } else if ((opCode == FMUL_OPCODE) || ((opCode == FDIV_OPCODE) && (fpMode == FP_EXP_ADD))) {
+                    if (TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                        ClearSingleMAR(OR4_MAR);
+                        ClearSingleMAR(OR5_MAR);
+                        ClearSingleMAR(PR2_MAR);
+                        ClearSingleMAR(PR3_MAR);
+                    }
+                    SetTrigger(CARRY_OUT_TRIGGER, OFF);
+                    if (mdr.digit.flag && !TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                        SetTrigger(FIELD_MK_1_TRIGGER, ON);
+                    }
+                    if (mdr.digit.flag && TestTrigger(FIRST_CYCLE_TRIGGER) && !TestTrigger(RE_COMP_TRIGGER)) {
+                        SetTrigger(TC_1_TRIGGER, (opCode == FMUL_OPCODE) ? OFF : ON);
+                    }
+
+                } else if ((opCode == FDIV_OPCODE) && (fpMode == FP_FRACTION_COMPARE)) {
+                    if (TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                        SaveMAR(OR4_MAR);
+                    }
+                    SetTrigger(CARRY_OUT_TRIGGER, OFF);
+                    if (mdr.digit.flag && !TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                        SetTrigger(FIELD_MK_1_TRIGGER, ON);
+                    }
                 }
-    
+
                 // Set next cycle
                 cycle = 12;
                 break;
@@ -1024,14 +1117,11 @@ void *Simulator(void *arg) {
                         (!TestTrigger(TC_1_TRIGGER) || TestTrigger(RE_COMP_TRIGGER))) {
                         SetTrigger(CARRY_IN_TRIGGER, ON);
                     }
-                    if (TestTrigger(FIRST_CYCLE_TRIGGER) && ((opCode == C_OPCODE) || (opCode == CM_OPCODE))) {
-                        SetTrigger(CARRY_IN_TRIGGER, ON);
-                    }
                     if ((mdr.digit.value != 0) && ((opCode == C_OPCODE) || (opCode == CM_OPCODE))) {
                         SetTrigger(DIGIT_TRIGGER, ON);
                     }
 
-                } else if ((opCode == D_OPCODE) || (opCode == DM_OPCODE)) {
+                } else if ((opCode == D_OPCODE) || (opCode == DM_OPCODE) || ((opCode == FDIV_OPCODE) && (fpMode == FP_DIVIDE))) {
                     if (TestTrigger(DIV_ADD_TRIGGER)) {
                         if (TestTrigger(FIELD_MK_1_TRIGGER)) {
                             SetTrigger(FIELD_MK_2_TRIGGER, ON);
@@ -1039,10 +1129,90 @@ void *Simulator(void *arg) {
                     } else {
                         if (TestTrigger(FIRST_CYCLE_TRIGGER)) {
                             SetTrigger(CARRY_IN_TRIGGER, ON);
-                            if (mdr.digit.flag && TestTrigger(DIV_LAST_CYC_TRIGGER)) {
+                            if ((opCode != FDIV_OPCODE) &&
+                                mdr.digit.flag && TestTrigger(DIV_LAST_CYC_TRIGGER)) {
                                 SetTrigger(DIV_SIGN_TRIGGER, ON);
                                 SetTrigger(HP_TRIGGER, OFF);
                             }
+                        }
+                    }
+
+                } else if ((opCode == FADD_OPCODE) || (opCode == FSUB_OPCODE) ||
+                           ((opCode == FDIV_OPCODE) && (fpMode == FP_EXP_MODIFY))) {
+                    if (fpMode == FP_EXP_COMPARE) {
+                        if (TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                            SaveMAR(OR5_MAR);
+                            if (mdr.digit.flag) {
+                                SetTrigger(TC_1_TRIGGER, !TestTrigger(TC_1_TRIGGER));
+                                SetTrigger(HP_TRIGGER, OFF);
+                            }
+                            if (!TestTrigger(TC_1_TRIGGER)) {
+                                SetTrigger(CARRY_IN_TRIGGER, ON);
+                            }
+                        } else {
+                            if (mdr.digit.flag) {
+                                SetTrigger(FIELD_MK_2_TRIGGER, ON);
+                            }
+                        }
+                    } else if ((fpMode == FP_FRACTION_ADD) || (fpMode == FP_EXP_MODIFY)) {
+                        if ((fpMode == FP_FRACTION_ADD) && TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                            SaveMAR(OR3_MAR);
+                        }
+                        if (TestTrigger(RE_COMP_TRIGGER)) {
+                            SetDR(0, mdr.digit.value);
+                        }
+                        if (mdr.digit.flag && !TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                            SetTrigger(FIELD_MK_2_TRIGGER, ON);
+                        }
+                        if (mdr.digit.flag && TestTrigger(FIRST_CYCLE_TRIGGER) && !TestTrigger(RE_COMP_TRIGGER) &&
+                            !((opCode == FDIV_OPCODE) && (fpMode == FP_EXP_MODIFY) &&
+                              TestTrigger(OFLO_CORR_TRIGGER) && TestTrigger(EXP_MODIFY_REQD_TRIGGER))) {
+                            SetTrigger(TC_1_TRIGGER, !TestTrigger(TC_1_TRIGGER));
+                            SetTrigger(HP_TRIGGER, OFF);
+                        }
+                        if (TestTrigger(FIRST_CYCLE_TRIGGER) &&
+                            (!TestTrigger(TC_1_TRIGGER) || TestTrigger(RE_COMP_TRIGGER))) {
+                            SetTrigger(CARRY_IN_TRIGGER, ON);
+                        }
+                    }
+
+                } else if ((opCode == FMUL_OPCODE) || ((opCode == FDIV_OPCODE) && (fpMode == FP_EXP_ADD))) {
+                    if (TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                        SaveMAR(OR5_MAR);
+                    }
+
+                    if (opCode == FMUL_OPCODE) {
+                        if (!TestTrigger(RE_COMP_TRIGGER)) {
+                            if (TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                                SetTrigger(PE_ZERO_TRIGGER, ON);
+                            }
+                            if (mdr.digit.value != 0) {
+                                SetTrigger(PE_ZERO_TRIGGER, OFF);
+                            }
+                        }
+                    }
+
+                    if (TestTrigger(RE_COMP_TRIGGER)) {
+                        SetDR(0, mdr.digit.value);
+                    }
+                    if (mdr.digit.flag && !TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                        SetTrigger(FIELD_MK_2_TRIGGER, ON);
+                    }
+                    if (mdr.digit.flag && TestTrigger(FIRST_CYCLE_TRIGGER) && !TestTrigger(RE_COMP_TRIGGER)) {
+                        SetTrigger(TC_1_TRIGGER, !TestTrigger(TC_1_TRIGGER));
+                        SetTrigger(HP_TRIGGER, OFF);
+                    }
+                    if (TestTrigger(FIRST_CYCLE_TRIGGER) &&
+                        (!TestTrigger(TC_1_TRIGGER) || TestTrigger(RE_COMP_TRIGGER))) {
+                        SetTrigger(CARRY_IN_TRIGGER, ON);
+                    }
+
+                } else if ((opCode == FDIV_OPCODE) && (fpMode == FP_FRACTION_COMPARE)) {
+                    if (TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                        SetTrigger(CARRY_IN_TRIGGER, ON);
+                    } else {
+                        if (mdr.digit.flag) {
+                            SetTrigger(FIELD_MK_2_TRIGGER, ON);
                         }
                     }
                 }
@@ -1121,7 +1291,159 @@ void *Simulator(void *arg) {
                     }
                     ClearDR();
 
-                } else if ((opCode == D_OPCODE) || (opCode == DM_OPCODE)) {
+                } else if ((opCode == FADD_OPCODE) || (opCode == FSUB_OPCODE) ||
+                           ((opCode == FDIV_OPCODE) && (fpMode == FP_EXP_MODIFY))) {
+                    if (dr.digit01.value <= 9) {
+                        temp = TestTrigger(TC_1_TRIGGER) ? dr.digit01.value : (9 - dr.digit01.value);
+                    } else if (dr.digit01.value == RECORD_MARK) {
+                        temp = TestTrigger(TC_1_TRIGGER) ? 0 : 9;
+                    } else {
+                        SetTrigger(MAR_CHK_TRIGGER, ON);
+                        break;
+                    }
+                    if (fpMode == FP_EXP_COMPARE) {
+                        if (mdr.digit.value > 9) {
+                            SetTrigger(MAR_CHK_TRIGGER, ON);
+                            break;
+                        }
+                        temp2 = mdr.digit.value;
+                        SetMAR(MAR_MAR, 300 + 10 * temp2 + (temp + TestTrigger(CARRY_IN_TRIGGER)) % 10);
+                        if (!ReadMemory(MAR_MAR)) break;
+                        if (mdr.digit.flag || ((temp == 9) && TestTrigger(CARRY_IN_TRIGGER))) {
+                            SetTrigger(CARRY_OUT_TRIGGER, ON);
+                        }
+                        SetTrigger(CARRY_IN_TRIGGER, OFF);
+                        if (!TestTrigger(CARRY_OUT_TRIGGER) && TestTrigger(FIELD_MK_2_TRIGGER) &&
+                            !TestTrigger(TC_1_TRIGGER)) {
+                            SetTrigger(HP_TRIGGER, !TestTrigger(HP_TRIGGER));
+                        }
+                        if (mdr.digit.value != 0) {
+                            SetTrigger(EZ_TRIGGER, OFF);
+                        }
+                        if (TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                            SetDigit(&mars[CR1_MAR].digit00001, mdr.digit.value);
+                        } else {
+                            SetDigit(&mars[CR1_MAR].digit00010, mdr.digit.value);
+                            SetDigit(&mars[CR1_MAR].digit00100, 0);
+                            SetDigit(&mars[CR1_MAR].digit01000, 0);
+                            SetDigit(&mars[CR1_MAR].digit10000, 0);
+                            mars[CR1_MAR].value = 10000 * mars[CR1_MAR].digit10000.value +
+                                                    1000 * mars[CR1_MAR].digit01000.value +
+                                                     100 * mars[CR1_MAR].digit00100.value +
+                                                      10 * mars[CR1_MAR].digit00010.value +
+                                                           mars[CR1_MAR].digit00001.value;
+                        }
+                        ClearDR();
+
+                    } else if ((fpMode == FP_FRACTION_ADD) || (fpMode == FP_EXP_MODIFY)) {
+                        if (TestTrigger(RE_COMP_TRIGGER)) {
+                            temp2 = 0;
+                        } else {
+                            if (mdr.digit.value > 9) {
+                                SetTrigger(MAR_CHK_TRIGGER, ON);
+                                break;
+                            }
+                            temp2 = mdr.digit.value;
+                        }
+                        SetMAR(MAR_MAR, 300 + 10 * temp2 + (temp + TestTrigger(CARRY_IN_TRIGGER)) % 10);
+                        if (!ReadMemory(MAR_MAR)) break;
+                        if (mdr.digit.flag || ((temp == 9) && TestTrigger(CARRY_IN_TRIGGER))) {
+                            SetTrigger(CARRY_OUT_TRIGGER, ON);
+                        }
+                        SetTrigger(CARRY_IN_TRIGGER, OFF);
+                        if (!((opCode == FDIV_OPCODE) && (fpMode == FP_EXP_MODIFY) &&
+                              TestTrigger(OFLO_CORR_TRIGGER) && TestTrigger(EXP_MODIFY_REQD_TRIGGER)) &&
+                            !TestTrigger(TC_1_TRIGGER)       && !TestTrigger(CARRY_OUT_TRIGGER)       &&
+                            TestTrigger(FIELD_MK_2_TRIGGER)  && !TestTrigger(RE_COMP_TRIGGER)) {
+                            SetTrigger(REC_CTRL_TRIGGER, ON);
+                            SetTrigger(HP_TRIGGER, !TestTrigger(HP_TRIGGER));
+                        }
+                        if (TestTrigger(TC_1_TRIGGER)       && TestTrigger(CARRY_OUT_TRIGGER) &&
+                            TestTrigger(FIELD_MK_2_TRIGGER) && !TestTrigger(REC_CTRL_TRIGGER)) {
+                            SetTrigger(ARITH_CHK_TRIGGER, ON);
+                        }
+                        if (!TestTrigger(FIELD_MK_1_TRIGGER) && TestTrigger(FIELD_MK_2_TRIGGER) &&
+                            !TestTrigger(RE_COMP_TRIGGER)) {
+                            SetTrigger(ARITH_CHK_TRIGGER, ON);
+                        }
+                        if (mdr.digit.value != 0) {
+                            SetTrigger(EZ_TRIGGER, OFF);
+                        }
+                        ClearDR();
+                    }
+
+                } else if ((opCode == FMUL_OPCODE) || ((opCode == FDIV_OPCODE) && (fpMode == FP_EXP_ADD))) {
+                    if (dr.digit01.value <= 9) {
+                        temp = TestTrigger(TC_1_TRIGGER) ? dr.digit01.value : (9 - dr.digit01.value);
+                    } else if (dr.digit01.value == RECORD_MARK) {
+                        temp = TestTrigger(TC_1_TRIGGER) ? 0 : 9;
+                    } else {
+                        SetTrigger(MAR_CHK_TRIGGER, ON);
+                        break;
+                    }
+                    if (TestTrigger(RE_COMP_TRIGGER)) {
+                        temp2 = 0;
+                    } else {
+                        if (mdr.digit.value > 9) {
+                            SetTrigger(MAR_CHK_TRIGGER, ON);
+                            break;
+                        }
+                        temp2 = mdr.digit.value;
+                    }
+                    SetMAR(MAR_MAR, 300 + 10 * temp2 + (temp + TestTrigger(CARRY_IN_TRIGGER)) % 10);
+                    if (!ReadMemory(MAR_MAR)) break;
+                    if (mdr.digit.flag || ((temp == 9) && TestTrigger(CARRY_IN_TRIGGER))) {
+                        SetTrigger(CARRY_OUT_TRIGGER, ON);
+                    }
+                    SetTrigger(CARRY_IN_TRIGGER, OFF);
+                    if (!((opCode == FMUL_OPCODE) && (fpMode == FP_EXP_MODIFY) &&
+                          TestTrigger(OFLO_CORR_TRIGGER) && TestTrigger(EXP_MODIFY_REQD_TRIGGER)) &&
+                        !TestTrigger(TC_1_TRIGGER)       && !TestTrigger(CARRY_OUT_TRIGGER)       &&
+                        TestTrigger(FIELD_MK_2_TRIGGER)  && !TestTrigger(RE_COMP_TRIGGER)) {
+                        SetTrigger(REC_CTRL_TRIGGER, ON);
+                        SetTrigger(HP_TRIGGER, !TestTrigger(HP_TRIGGER));
+                    }
+                    if (TestTrigger(TC_1_TRIGGER)       && TestTrigger(CARRY_OUT_TRIGGER) &&
+                        TestTrigger(FIELD_MK_2_TRIGGER) && !TestTrigger(REC_CTRL_TRIGGER)) {
+                        SetTrigger(ARITH_CHK_TRIGGER, ON);
+                    }
+                    if (!TestTrigger(FIELD_MK_1_TRIGGER) && TestTrigger(FIELD_MK_2_TRIGGER) && !TestTrigger(RE_COMP_TRIGGER)) {
+                        SetTrigger(ARITH_CHK_TRIGGER, ON);
+                    }
+                    if (mdr.digit.value != 0) {
+                        SetTrigger(EZ_TRIGGER, OFF);
+                    }
+                    ClearDR();
+
+                } else if ((opCode == FDIV_OPCODE) && (fpMode == FP_FRACTION_COMPARE)) {
+                    if (dr.digit01.value <= 9) {
+                        temp = TestTrigger(TC_1_TRIGGER) ? dr.digit01.value : (9 - dr.digit01.value);
+                    } else if (dr.digit01.value == RECORD_MARK) {
+                        temp = TestTrigger(TC_1_TRIGGER) ? 0 : 9;
+                    } else {
+                        SetTrigger(MAR_CHK_TRIGGER, ON);
+                        break;
+                    }
+                    if (mdr.digit.value > 9) {
+                        SetTrigger(MAR_CHK_TRIGGER, ON);
+                        break;
+                    }
+                    temp2 = mdr.digit.value;
+                    SetMAR(MAR_MAR, 300 + 10 * temp2 + (temp + TestTrigger(CARRY_IN_TRIGGER)) % 10);
+                    if (!ReadMemory(MAR_MAR)) break;
+                    if (mdr.digit.flag || ((temp == 9) && TestTrigger(CARRY_IN_TRIGGER))) {
+                        SetTrigger(CARRY_OUT_TRIGGER, ON);
+                    }
+                    SetTrigger(CARRY_IN_TRIGGER, OFF);
+                    if (!TestTrigger(CARRY_OUT_TRIGGER) && TestTrigger(FIELD_MK_2_TRIGGER) && !TestTrigger(TC_1_TRIGGER)) {
+                        SetTrigger(HP_TRIGGER, !TestTrigger(HP_TRIGGER));
+                    }
+                    if (mdr.digit.value != 0) {
+                        SetTrigger(EZ_TRIGGER, OFF);
+                    }
+                    ClearDR();
+
+                } else if ((opCode == D_OPCODE) || (opCode == DM_OPCODE) || ((opCode == FDIV_OPCODE) && (fpMode == FP_DIVIDE))) {
                     if ((dr.digit01.value > 9) || (mdr.digit.value > 9)) {
                         SetTrigger(MAR_CHK_TRIGGER, ON);
                         break;
@@ -1154,15 +1476,13 @@ void *Simulator(void *arg) {
                         if (TestTrigger(FIRST_CYCLE_TRIGGER) && !TestTrigger(HP_TRIGGER)) {
                             mdr.digit.flag = 1;
                         }
-                        if (TestTrigger(FIRST_CYCLE_TRIGGER) && !TestTrigger(RE_COMP_TRIGGER) &&
-                            TestTrigger(HP_TRIGGER)) {
+                        if (TestTrigger(FIRST_CYCLE_TRIGGER) && !TestTrigger(RE_COMP_TRIGGER) && TestTrigger(HP_TRIGGER)) {
                             mdr.digit.flag = 0;
                         }
                         if (TestTrigger(FIELD_MK_2_TRIGGER)) {
                             mdr.digit.flag = 1;
                         }
-                        if (!TestTrigger(FIRST_CYCLE_TRIGGER) && !TestTrigger(RE_COMP_TRIGGER) &&
-                            !TestTrigger(FIELD_MK_2_TRIGGER)) {
+                        if (!TestTrigger(FIRST_CYCLE_TRIGGER) && !TestTrigger(RE_COMP_TRIGGER) && !TestTrigger(FIELD_MK_2_TRIGGER)) {
                             mdr.digit.flag = 0;
                         }
                         if (!((opCode == C_OPCODE) || (opCode == CM_OPCODE))) {
@@ -1179,27 +1499,275 @@ void *Simulator(void *arg) {
                         SetTrigger(HP_TRIGGER, OFF);
                     }
 
-                } else if ((opCode == D_OPCODE) || (opCode == DM_OPCODE)) {
+                } else if ((opCode == D_OPCODE) || (opCode == DM_OPCODE) || ((opCode == FDIV_OPCODE) && (fpMode == FP_DIVIDE))) {
                     if (TestTrigger(CARRY_OUT_TRIGGER)) {
                         SetTrigger(CARRY_IN_TRIGGER, ON);
                     }
                     if (mdr.digit.flag) {
                         SetMDRFlag(FALSE);
                     }
-                    if (TestTrigger(FIRST_CYCLE_TRIGGER) && TestTrigger(DIV_ADD_TRIGGER) &&
-                        TestTrigger(DIV_LAST_CYC_TRIGGER) && TestTrigger(DIV_SIGN_TRIGGER)) {
+                    if (TestTrigger(FIRST_CYCLE_TRIGGER)  && TestTrigger(DIV_ADD_TRIGGER) && TestTrigger(DIV_LAST_CYC_TRIGGER) &&
+                        TestTrigger(DIV_SIGN_TRIGGER)) {
                         SetMDRFlag(TRUE);
                     }
                     SetTrigger(FIRST_CYCLE_TRIGGER, OFF);
-                    if (TestTrigger(DIV_ADD_TRIGGER) && TestTrigger(DIV_LAST_CYC_TRIGGER) &&
-                        TestTrigger(FIELD_MK_2_TRIGGER)) {
+                    if (TestTrigger(DIV_ADD_TRIGGER) && TestTrigger(DIV_LAST_CYC_TRIGGER) && TestTrigger(FIELD_MK_2_TRIGGER)) {
                         SetMDRFlag(TRUE);
                     }
                     if (!WriteMemory(OR2_MAR)) break;
                     IncrementMAR(OR2_MAR, -1);
-                    if (TestTrigger(FIELD_MK_2_TRIGGER) && !TestTrigger(DIV_ADD_TRIGGER) &&
-                        TestTrigger(CARRY_OUT_TRIGGER)) {
+                    if ((opCode == FDIV_OPCODE) && TestTrigger(DIV_ADD_TRIGGER) && TestTrigger(DIV_LAST_CYC_TRIGGER) &&
+                        TestTrigger(FIELD_MK_2_TRIGGER)) {
+                        ClearSingleMAR(PR1_MAR);
+                        LoadMAR(OR2_MAR);
+                        SaveMAR(PR1_MAR);
+                    }
+                    if (TestTrigger(FIELD_MK_2_TRIGGER) && !TestTrigger(DIV_ADD_TRIGGER) && TestTrigger(CARRY_OUT_TRIGGER)) {
                         SetMQR(mqr.value + 1);
+                    }
+
+                } else if ((opCode == FADD_OPCODE) || (opCode == FSUB_OPCODE) || (opCode == FMUL_OPCODE) || (opCode == FDIV_OPCODE)) {
+                    if (fpMode == FP_EXP_COMPARE) {
+                        IncrementMAR(OR2_MAR, -1);
+                        SetTrigger(FIRST_CYCLE_TRIGGER, OFF);
+                        if (TestTrigger(CARRY_OUT_TRIGGER)) {
+                            SetTrigger(CARRY_IN_TRIGGER, ON);
+                        }
+                        if (!TestTrigger(FIELD_MK_1_TRIGGER) && !TestTrigger(FIELD_MK_2_TRIGGER)) {
+                            cycle = 11;
+                        } else {
+                            if (TestTrigger(TC_1_TRIGGER) && TestTrigger(CARRY_OUT_TRIGGER)) {
+                                SetTrigger(D_GT_99_TRIGGER, ON);
+                                SetTrigger(EZ_TRIGGER, OFF);
+                            }
+                            if (!TestTrigger(TC_1_TRIGGER) && !TestTrigger(CARRY_OUT_TRIGGER)) {
+                                SetTrigger(CNTR_COMP_TRIGGER, ON);
+                            }
+                            if (TestTrigger(EZ_TRIGGER) && !TestTrigger(D_GT_99_TRIGGER)) {
+                                fpMode = FP_FRACTION_ADD;
+                                SetTrigger(TC_1_TRIGGER, (opCode == FADD_OPCODE) ? ON : OFF);
+                                SetTrigger(HP_TRIGGER, ON);
+                                SetTrigger(EZ_TRIGGER, ON);
+                                SetTrigger(CARRY_IN_TRIGGER, OFF);
+                                SetTrigger(FIRST_CYCLE_TRIGGER, ON);
+                                SetTrigger(FIELD_MK_1_TRIGGER, OFF);
+                                SetTrigger(FIELD_MK_2_TRIGGER, OFF);
+                                cycle = 11;
+                            } else if (TestTrigger(HP_TRIGGER)) {
+                                fpMode = FP_SCAN_Q;
+                                SetTrigger(SCAN_Q_LATCH, ON);
+                                SetTrigger(FIRST_CYCLE_TRIGGER, ON);
+                                SetTrigger(FIELD_MK_1_TRIGGER, OFF);
+                                SetTrigger(FIELD_MK_2_TRIGGER, OFF);
+                                cycle = 24;
+                            } else {
+                                fpMode = FP_EXP_TRANSMIT;
+                                SetTrigger(FIRST_CYCLE_TRIGGER, ON);
+                                SetTrigger(FIELD_MK_1_TRIGGER, OFF);
+                                SetTrigger(FIELD_MK_2_TRIGGER, OFF);
+                                cycle = 24;
+                            }
+                        }
+                        break;
+
+                    } else if (fpMode == FP_FRACTION_ADD) {
+                        if (TestTrigger(FIRST_CYCLE_TRIGGER) && !TestTrigger(HP_TRIGGER)) {
+                            mdr.digit.flag = 1;
+                        }
+                        if (TestTrigger(FIRST_CYCLE_TRIGGER) && !TestTrigger(RE_COMP_TRIGGER) && TestTrigger(HP_TRIGGER)) {
+                            mdr.digit.flag = 0;
+                        }
+                        if (TestTrigger(FIELD_MK_2_TRIGGER)) {
+                            mdr.digit.flag = 1;
+                        }
+                        if (!TestTrigger(FIRST_CYCLE_TRIGGER) && !TestTrigger(RE_COMP_TRIGGER) && !TestTrigger(FIELD_MK_2_TRIGGER)) {
+                            mdr.digit.flag = 0;
+                        }
+                        if (!WriteMemory(OR2_MAR)) break;
+                        IncrementMAR(OR2_MAR, -1);
+                        SetTrigger(FIRST_CYCLE_TRIGGER, OFF);
+                        if (TestTrigger(CARRY_OUT_TRIGGER)) {
+                            SetTrigger(CARRY_IN_TRIGGER, ON);
+                        }
+                        if (TestTrigger(FIELD_MK_2_TRIGGER) && TestTrigger(EZ_TRIGGER)) {
+                            SetTrigger(HP_TRIGGER, OFF);
+                        }
+                        if (!TestTrigger(REC_CTRL_TRIGGER) && !TestTrigger(FIELD_MK_1_TRIGGER) && !TestTrigger(FIELD_MK_2_TRIGGER)) {
+                            cycle = 11;
+                        } else if (!TestTrigger(REC_CTRL_TRIGGER) && TestTrigger(FIELD_MK_1_TRIGGER) &&
+                                   !TestTrigger(FIELD_MK_2_TRIGGER)) {
+                            cycle = 21;
+                        } else if (!TestTrigger(RE_COMP_TRIGGER) && TestTrigger(REC_CTRL_TRIGGER)) {
+                            SetTrigger(FIRST_CYCLE_TRIGGER, ON);
+                            cycle = 21;
+                        } else if (TestTrigger(RE_COMP_TRIGGER) && !TestTrigger(FIELD_MK_2_TRIGGER)) {
+                            cycle = 23;
+                        } else {
+                            SetTrigger(HI_ORDER_ZERO_TRIGGER, (mdr.digit.value == 0) ? ON : OFF);
+                            if (TestTrigger(TC_1_TRIGGER) && TestTrigger(CARRY_OUT_TRIGGER)) {
+                                SetTrigger(NORM_SHIFT_R_TRIGGER, ON);
+                                SetTrigger(CARRY_IN_TRIGGER, OFF);
+                                fpMode = FP_EXP_MODIFY_ENTRY;
+                                cycle = 24;
+                            } else if (TestTrigger(EZ_TRIGGER)) {
+                                SetTrigger(UNFLO_ZERO_TRIGGER, ON);
+                                fpMode = FP_DIGIT_FORCE;
+                                SetTrigger(FIRST_CYCLE_TRIGGER, ON);
+                                SetTrigger(FIELD_MK_1_TRIGGER, OFF);
+                                SetTrigger(FIELD_MK_2_TRIGGER, OFF);
+                                SetTrigger(L1_MODULO_TRIGGER, OFF);
+                                SetTrigger(L2_MODULO_TRIGGER, OFF);
+                                cycle = 24;
+                            } else if (!TestTrigger(TC_1_TRIGGER) && TestTrigger(HI_ORDER_ZERO_TRIGGER)) {
+                                SaveMAR(PR2_MAR);
+                                SaveMAR(PR3_MAR);
+                                SetTrigger(INCR_TRIGGER, ON);
+                                SetTrigger(DECR_TRIGGER, OFF);
+                                fpMode = FP_SCAN_ZERO;
+                                SetTrigger(FIRST_CYCLE_TRIGGER, ON);
+                                SetTrigger(FIELD_MK_1_TRIGGER, OFF);
+                                SetTrigger(FIELD_MK_2_TRIGGER, OFF);
+                                cycle = 24;
+                            } else {
+                                cycle = 1;
+                            }
+                        }
+                        break;
+
+                    } else if (fpMode == FP_EXP_MODIFY) {
+                        if (TestTrigger(FIRST_CYCLE_TRIGGER) && !TestTrigger(HP_TRIGGER)) {
+                            mdr.digit.flag = 1;
+                        }
+                        if (TestTrigger(FIRST_CYCLE_TRIGGER) && !TestTrigger(RE_COMP_TRIGGER) && TestTrigger(HP_TRIGGER)) {
+                            mdr.digit.flag = 0;
+                        }
+                        if (!TestTrigger(FIRST_CYCLE_TRIGGER) && !TestTrigger(RE_COMP_TRIGGER) && !TestTrigger(FIELD_MK_2_TRIGGER)) {
+                            mdr.digit.flag = 0;
+                        }
+                        if (TestTrigger(FIELD_MK_2_TRIGGER)) {
+                            mdr.digit.flag = 1;
+                        }
+                        if (!WriteMemory(OR2_MAR)) break;
+                        IncrementMAR(OR2_MAR, -1);
+                        SetTrigger(FIRST_CYCLE_TRIGGER, OFF);
+                        if (TestTrigger(CARRY_OUT_TRIGGER)) {
+                            SetTrigger(CARRY_IN_TRIGGER, ON);
+                        }
+                        if (!TestTrigger(FIELD_MK_1_TRIGGER) && !TestTrigger(FIELD_MK_2_TRIGGER)) {
+                            cycle = 21;
+                        } else if (!TestTrigger(RE_COMP_TRIGGER) && TestTrigger(REC_CTRL_TRIGGER)) {
+                            SetTrigger(FIRST_CYCLE_TRIGGER, ON);
+                            cycle = 21;
+                        } else {
+                            if (TestTrigger(TC_1_TRIGGER) && TestTrigger(CARRY_OUT_TRIGGER)) {
+                                SetTrigger(OFLO_UNFLO_TRIGGER, ON);
+                                if (!TestTrigger(HP_TRIGGER)) {
+                                    SetTrigger(UNFLO_ZERO_TRIGGER, ON);
+                                }
+                            }
+                            if (((opCode == FMUL_OPCODE) || (opCode == FDIV_OPCODE)) &&
+                                TestTrigger(OFLO_CORR_TRIGGER) && TestTrigger(EXP_MODIFY_REQD_TRIGGER)) {
+                                SetTrigger(OFLO_UNFLO_TRIGGER, OFF);
+                                SetTrigger(UNFLO_ZERO_TRIGGER, OFF);
+                                SetTrigger(OFLO_CORR_TRIGGER, OFF);
+                            }
+                            fpMode = FP_EXP_MODIFY_EXIT;
+                            cycle = 24;
+                        }
+                        break;
+
+                    } else if (fpMode == FP_EXP_ADD) {
+                        if (TestTrigger(FIRST_CYCLE_TRIGGER) && !TestTrigger(HP_TRIGGER)) {
+                            mdr.digit.flag = 1;
+                        }
+                        if (TestTrigger(FIRST_CYCLE_TRIGGER) && !TestTrigger(RE_COMP_TRIGGER) && TestTrigger(HP_TRIGGER)) {
+                            mdr.digit.flag = 0;
+                        }
+                        if (TestTrigger(FIELD_MK_2_TRIGGER)) {
+                            mdr.digit.flag = 1;
+                        }
+                        if (!TestTrigger(FIRST_CYCLE_TRIGGER) && !TestTrigger(RE_COMP_TRIGGER) && !TestTrigger(FIELD_MK_2_TRIGGER)) {
+                            mdr.digit.flag = 0;
+                        }
+                        if (!WriteMemory(OR2_MAR)) break;
+                        if (TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                            SetTrigger(HI_ORDER_ZERO_TRIGGER,
+                                       ((mdr.digit.value == 0) &&
+                                        (((opCode == FMUL_OPCODE) && TestTrigger(HP_TRIGGER)) ||
+                                         ((opCode == FDIV_OPCODE) && !TestTrigger(HP_TRIGGER))))
+                                       ? ON : OFF);
+                            SetTrigger(D_GT_99_TRIGGER, TestTrigger(HP_TRIGGER) ? ON : OFF);
+                        }
+                        IncrementMAR(OR2_MAR, -1);
+                        SetTrigger(FIRST_CYCLE_TRIGGER, OFF);
+                        if (TestTrigger(CARRY_OUT_TRIGGER)) {
+                            SetTrigger(CARRY_IN_TRIGGER, ON);
+                        }
+                        if (TestTrigger(FIELD_MK_2_TRIGGER) && TestTrigger(EZ_TRIGGER)) {
+                            SetTrigger(HP_TRIGGER, OFF);
+                        }
+                        if (!TestTrigger(REC_CTRL_TRIGGER) && !TestTrigger(FIELD_MK_1_TRIGGER) && !TestTrigger(FIELD_MK_2_TRIGGER)) {
+                            cycle = 11;
+                        } else if (!TestTrigger(REC_CTRL_TRIGGER) && TestTrigger(FIELD_MK_1_TRIGGER) &&
+                                   !TestTrigger(FIELD_MK_2_TRIGGER)) {
+                            cycle = 21;
+                        } else if (!TestTrigger(RE_COMP_TRIGGER) && TestTrigger(REC_CTRL_TRIGGER)) {
+                            SetTrigger(FIRST_CYCLE_TRIGGER, ON);
+                            cycle = 21;
+                        } else if (TestTrigger(RE_COMP_TRIGGER) && !TestTrigger(FIELD_MK_2_TRIGGER)) {
+                            cycle = 23;
+                        } else {
+                            ClearSingleMAR(OR3_MAR);
+                            LoadMAR(OR2_MAR);
+                            SaveMAR(OR3_MAR);
+                            SaveMAR(PR3_MAR);
+                            SaveMAR(PR2_MAR);
+                            IncrementMAR(PR2_MAR, -1);
+                            if (TestTrigger(TC_1_TRIGGER) && TestTrigger(CARRY_OUT_TRIGGER)) {
+                                SetTrigger(OFLO_UNFLO_TRIGGER, ON);
+                                if (!TestTrigger(D_GT_99_TRIGGER)) {
+                                    SetTrigger(UNFLO_ZERO_TRIGGER, ON);
+                                }
+                                if ((mdr.digit.value == 0) && TestTrigger(HI_ORDER_ZERO_TRIGGER)) {
+                                    SetTrigger(OFLO_CORR_TRIGGER, ON);
+                                }
+                            }
+                            if (opCode == FMUL_OPCODE) {
+                                SetTrigger(FIELD_MK_1_TRIGGER, OFF);
+                                SetTrigger(FIELD_MK_2_TRIGGER, OFF);
+                                fpMode = FP_MULTIPLY;
+                                cycle = 32;
+                            } else {
+                                fpMode = FP_FRACTION_COMPARE;
+                                SetTrigger(HP_TRIGGER, ON);
+                                SetTrigger(EZ_TRIGGER, ON);
+                                SetTrigger(CARRY_IN_TRIGGER, OFF);
+                                SetTrigger(TC_1_TRIGGER, OFF);
+                                SetTrigger(FIRST_CYCLE_TRIGGER, ON);
+                                SetTrigger(FIELD_MK_1_TRIGGER, OFF);
+                                SetTrigger(FIELD_MK_2_TRIGGER, OFF);
+                                cycle = 11;
+                            }
+                        }
+                        break;
+
+                    } else if (fpMode == FP_FRACTION_COMPARE) {
+                        IncrementMAR(OR2_MAR, -1);
+                        SetTrigger(FIRST_CYCLE_TRIGGER, OFF);
+                        if (TestTrigger(CARRY_OUT_TRIGGER)) {
+                            SetTrigger(CARRY_IN_TRIGGER, ON);
+                        }
+                        if (!TestTrigger(FIELD_MK_1_TRIGGER) && !TestTrigger(FIELD_MK_2_TRIGGER)) {
+                            cycle = 11;
+                        } else {
+                            SetTrigger(EXP_MODIFY_REQD_TRIGGER, TestTrigger(HP_TRIGGER) ? ON : OFF);
+                            fpMode = FP_FALSE_TRANSMIT;
+                            SetTrigger(FIRST_CYCLE_TRIGGER, ON);
+                            SetTrigger(FIELD_MK_1_TRIGGER, OFF);
+                            SetTrigger(FIELD_MK_2_TRIGGER, OFF);
+                            cycle = 24;
+                        }
+                        break;
                     }
                 }
 
@@ -1209,8 +1777,7 @@ void *Simulator(void *arg) {
                     if (!TestTrigger(REC_CTRL_TRIGGER) && !TestTrigger(FIELD_MK_1_TRIGGER) &&
                         !TestTrigger(FIELD_MK_2_TRIGGER)) {
                         cycle = 11;
-                    } else if (!TestTrigger(REC_CTRL_TRIGGER) && TestTrigger(FIELD_MK_1_TRIGGER) &&
-                               !TestTrigger(FIELD_MK_2_TRIGGER)) {
+                    } else if (!TestTrigger(REC_CTRL_TRIGGER) && TestTrigger(FIELD_MK_1_TRIGGER) && !TestTrigger(FIELD_MK_2_TRIGGER)) {
                         cycle = 21;
                     } else if (!TestTrigger(RE_COMP_TRIGGER) && TestTrigger(REC_CTRL_TRIGGER)) {
                         SetTrigger(FIRST_CYCLE_TRIGGER, ON);
@@ -1221,7 +1788,7 @@ void *Simulator(void *arg) {
                         cycle = 1;
                     }
 
-                } else if ((opCode == D_OPCODE) || (opCode == DM_OPCODE)) {
+                } else if ((opCode == D_OPCODE) || (opCode == DM_OPCODE) || ((opCode == FDIV_OPCODE) && (fpMode == FP_DIVIDE))) {
                     if (!TestTrigger(FIELD_MK_1_TRIGGER)) {
                         cycle = 11;
                     } else if (TestTrigger(FIELD_MK_2_TRIGGER)) {
@@ -1236,7 +1803,7 @@ void *Simulator(void *arg) {
                 }
                 break;
 
-            case 15:    // E-15
+            case 15:    // E-15  <=  BT, BTFL, BTM
 
                 // Save return address
                 LoadMAR(IR1_MAR);
@@ -1244,6 +1811,7 @@ void *Simulator(void *arg) {
 
                 // Set auxiliary triggers
                 SetTrigger(FIRST_CYCLE_TRIGGER, ON);
+                SetTrigger(BT_BTM_BTFL_TRIGGER, ON);
 
                 // Set next cycle
                 cycle = 16;
@@ -1264,26 +1832,28 @@ void *Simulator(void *arg) {
 
             case 17:    // E-17
 
-                (void)printf("Unimplemented cycle: E-17\n");
+                (void)printf("Unused cycle: E-17\n");
                 runState = CHECK_STOP_STATE;
                 break;
 
-            case 18:    // E-18
+            case 18:    // E-18  <=  B, BB, BI, BNI
 
                 // Branch to address
-                if ((opCode == B_OPCODE)   || (opCode == BI_OPCODE)  || (opCode == BNI_OPCODE) ||
-                    (opCode == BD_OPCODE)  || (opCode == BNF_OPCODE) || (opCode == BNR_OPCODE) ||
-                    (opCode == BNG_OPCODE)) {
+                if ((opCode == B_OPCODE)   || (opCode == BI_OPCODE)  || (opCode == BNI_OPCODE) || (opCode == BD_OPCODE)  ||
+                    (opCode == BNF_OPCODE) || (opCode == BNR_OPCODE) || (opCode == BNG_OPCODE)) {
                     LoadMAR(OR2_MAR);
 
                 } else if (opCode == BB_OPCODE) {
                     if (TestTrigger(SAVE_CTRL_TRIGGER)) {
                         SetTrigger(SAVE_CTRL_TRIGGER, OFF);
-                        SetTrigger(SAVE_2_TRIGGER, OFF);
                         LoadMAR(PR1_MAR);
-                    } else {
+                    } else if (TestTrigger(BT_BTM_BTFL_TRIGGER)) {
+                        SetTrigger(SAVE_2_TRIGGER, ON);
+                        SetTrigger(BT_BTM_BTFL_TRIGGER, OFF);
                         LoadMAR(IR2_MAR);
-                        SetMAR(IR2_MAR, 0);
+                    } else {
+                        SetTrigger(MAR_CHK_TRIGGER, ON);
+                        break;
                     }
                 }
                 SaveMAR(IR1_MAR);
@@ -1295,11 +1865,21 @@ void *Simulator(void *arg) {
             case 19:    // E-19
 
                 // Set next cycle
-                if ((opCode == M_OPCODE) || (opCode == MM_OPCODE)) {
+                if ((opCode == M_OPCODE) || (opCode == MM_OPCODE) || (opCode == FMUL_OPCODE)) {
                     if (!TestTrigger(FIELD_MK_1_TRIGGER) && !TestTrigger(CARRY_OUT_TRIGGER)) {
                         cycle = 33;
                     } else if (TestTrigger(CARRY_OUT_TRIGGER)) {
                         cycle = 39;
+                    } else if (opCode == FMUL_OPCODE) {
+                        if (TestTrigger(EZ_TRIGGER)) {
+                            SetTrigger(UNFLO_ZERO_TRIGGER, ON);
+                            SetTrigger(HP_TRIGGER, OFF);
+                            SetTrigger(OFLO_UNFLO_TRIGGER, OFF);
+                            SetTrigger(EXP_MODIFY_REQD_TRIGGER, OFF);
+                        }
+
+                        fpMode = FP_EXP_MODIFY_ENTRY;
+                        cycle = 24;
                     } else {
                         cycle = 1;
                     }
@@ -1311,7 +1891,7 @@ void *Simulator(void *arg) {
 
             case 20:    // E-20
 
-                (void)printf("Unimplemented cycle: E-20\n");
+                (void)printf("Unused cycle: E-20\n");
                 runState = CHECK_STOP_STATE;
                 break;
 
@@ -1330,10 +1910,83 @@ void *Simulator(void *arg) {
                         SetTrigger(RE_COMP_TRIGGER, ON);
                     }
 
-                } else if ((opCode == D_OPCODE) || (opCode == DM_OPCODE)) {
+                } else if ((opCode == D_OPCODE) || (opCode == DM_OPCODE) || ((opCode == FDIV_OPCODE) && (fpMode == FP_DIVIDE))) {
                     SetTrigger(CARRY_OUT_TRIGGER, OFF);
                     SetTrigger(FIELD_MK_2_TRIGGER, ON);
                     ClearDR();
+
+                } else if ((opCode == FADD_OPCODE) || (opCode == FSUB_OPCODE)) {
+                    if (fpMode == FP_FRACTION_ADD) {
+                        ClearDR();
+                        SetTrigger(CARRY_OUT_TRIGGER, OFF);
+                        if (TestTrigger(REC_CTRL_TRIGGER)) {
+                            LoadMAR(OR3_MAR);
+                            SaveMAR(OR2_MAR);
+                            SetTrigger(FIELD_MK_1_TRIGGER, OFF);
+                            SetTrigger(FIELD_MK_2_TRIGGER, OFF);
+                            SetTrigger(RE_COMP_TRIGGER, ON);
+                        }
+
+                    } else if (fpMode == FP_EXP_MODIFY) {
+                        SetTrigger(CARRY_OUT_TRIGGER, OFF);
+                        if (TestTrigger(REC_CTRL_TRIGGER) && !TestTrigger(RE_COMP_TRIGGER)) {
+                            IncrementMAR(OR2_MAR, 2);
+                            SetTrigger(FIELD_MK_1_TRIGGER, OFF);
+                            SetTrigger(FIELD_MK_2_TRIGGER, OFF);
+                            SetTrigger(RE_COMP_TRIGGER, ON);
+                        } else if (TestTrigger(RE_COMP_TRIGGER)) {
+                        } else if (TestTrigger(NORM_SHIFT_R_TRIGGER)) {
+                            SetDR(0, TestTrigger(FIRST_CYCLE_TRIGGER) ? 1 : 0);
+                            if (!TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                                SetTrigger(FIELD_MK_1_TRIGGER, ON);
+                            }
+                        } else {
+                            if (TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                                SetTrigger(TC_1_TRIGGER, OFF);
+                            }
+                            SetDR(0, TestTrigger(FIRST_CYCLE_TRIGGER) ? mars[CR1_MAR].digit00001.value
+                                                                       : mars[CR1_MAR].digit00010.value);
+                            if (!TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                                SetTrigger(FIELD_MK_1_TRIGGER, ON);
+                            }
+                        }
+                    }
+
+                } else if ((opCode == FMUL_OPCODE) || (opCode == FDIV_OPCODE)) {
+                    if (fpMode == FP_EXP_ADD) {
+                        ClearDR();
+                        SetTrigger(CARRY_OUT_TRIGGER, OFF);
+                        if (TestTrigger(REC_CTRL_TRIGGER)) {
+                            LoadMAR(OR3_MAR);
+                            SaveMAR(OR2_MAR);
+                            SetTrigger(FIELD_MK_1_TRIGGER, OFF);
+                            SetTrigger(FIELD_MK_2_TRIGGER, OFF);
+                            SetTrigger(RE_COMP_TRIGGER, ON);
+                        }
+
+                    } else if (fpMode == FP_EXP_MODIFY) {
+                        SetTrigger(CARRY_OUT_TRIGGER, OFF);
+                        if (TestTrigger(REC_CTRL_TRIGGER) && !TestTrigger(RE_COMP_TRIGGER)) {
+                            IncrementMAR(OR2_MAR, 2);
+                            SetTrigger(FIELD_MK_1_TRIGGER, OFF);
+                            SetTrigger(FIELD_MK_2_TRIGGER, OFF);
+                            SetTrigger(RE_COMP_TRIGGER, ON);
+                        } else if (TestTrigger(RE_COMP_TRIGGER)) {
+                        } else {
+                            if (TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                                int boundary = TestTrigger(OFLO_CORR_TRIGGER) && TestTrigger(EXP_MODIFY_REQD_TRIGGER);
+                                SetTrigger(TC_1_TRIGGER,
+                                           ((opCode == FMUL_OPCODE) || ((opCode == FDIV_OPCODE) && boundary)) ? OFF : ON);
+                                if ((opCode == FDIV_OPCODE) && boundary) {
+                                    SetTrigger(HP_TRIGGER, OFF);
+                                }
+                            }
+                            SetDR(0, (TestTrigger(FIRST_CYCLE_TRIGGER) && TestTrigger(EXP_MODIFY_REQD_TRIGGER)) ? 1 : 0);
+                            if (!TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                                SetTrigger(FIELD_MK_1_TRIGGER, ON);
+                            }
+                        }
+                    }
                 }
 
                 // Set next cycle
@@ -1342,7 +1995,7 @@ void *Simulator(void *arg) {
 
             case 22:    // E-22
 
-                (void)printf("Unimplemented cycle: E-22\n");
+                (void)printf("Unused cycle: E-22\n");
                 runState = CHECK_STOP_STATE;
                 break;
 
@@ -1356,27 +2009,631 @@ void *Simulator(void *arg) {
                 cycle = 12;
                 break;
 
-            case 24:    // E-24
+            case 24:    // E-24  <=  FSL, FSR
 
-                // Unused cycle
-                (void)printf("Bad cycle: E-24\n");
-                runState = CHECK_STOP_STATE;
+                // Process operation
+                if ((opCode == FADD_OPCODE) || (opCode == FSUB_OPCODE) || (opCode == FMUL_OPCODE) || (opCode == FDIV_OPCODE) ||
+                    (opCode == FSL_OPCODE)  || (opCode == FSR_OPCODE)) {
+                    switch (fpMode) {
+
+                        case FP_SCAN_Q:
+                            SetTrigger(DECR_TRIGGER, ON);
+                            SetTrigger(INCR_TRIGGER, OFF);
+                            if (!ReadMemory(OR1_MAR)) break;
+                            if (TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                                if (mdr.digit.flag) {
+                                    SetTrigger(SCAN_MINUS_TRIGGER, ON);
+                                }
+                            } else {
+                                if (mdr.digit.flag) {
+                                    SetTrigger(SCAN_Q_EXIT_TRIGGER, ON);
+                                }
+                            }
+                            IncrementMAR(OR1_MAR, -1);
+                            break;
+
+                        case FP_EXP_TRANSMIT:
+                            if (!ReadMemory(OR4_MAR)) break;
+                            IncrementMAR(OR4_MAR, -1);
+                            break;
+
+                        case FP_SCAN_P:
+                            if (!ReadMemory(PR2_MAR)) break;
+                            if (TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                                if (mdr.digit.flag) {
+                                    SetTrigger(SCAN_MINUS_TRIGGER, ON);
+                                }
+                            } else {
+                                if (mdr.digit.flag) {
+                                    SetTrigger(FIELD_MK_1_TRIGGER, ON);
+                                }
+                            }
+                            IncrementMAR(PR2_MAR, -1);
+                            break;
+
+                        case FP_SHIFT_RIGHT:
+                            if (!ReadMemory(PR2_MAR)) break;
+                            if (mdr.digit.flag) {
+                                SetTrigger(FIELD_MK_1_TRIGGER, ON);
+                            }
+                            IncrementMAR(PR2_MAR, -1);
+                            break;
+
+                        case FP_ZERO_FILL_R:
+                            if (!ReadMemory(PR3_MAR)) break;
+                            if (mdr.digit.flag) {
+                                SetTrigger(FIELD_MK_2_TRIGGER, ON);
+                            }
+                            SaveMAR(PR3_MAR);
+                            break;
+
+                        case FP_FSR_TRANSMIT:
+                            if (!ReadMemory(OR2_MAR)) break;
+                            SetTrigger(SCAN_MINUS_TRIGGER, mdr.digit.flag ? ON : OFF);
+                            break;
+
+                        case FP_EXP_MODIFY_ENTRY:
+                            LoadMAR(OR5_MAR);
+                            SaveMAR(OR2_MAR);
+                            SaveMAR(OR3_MAR);
+                            SaveMAR(OR5_MAR);
+                            SetTrigger(HP_AUX_TRIGGER, TestTrigger(HP_TRIGGER));
+                            SetTrigger(RE_COMP_TRIGGER, OFF);
+                            SetTrigger(REC_CTRL_TRIGGER, OFF);
+                            break;
+
+                        case FP_EXP_MODIFY_EXIT:
+                            LoadMAR(OR2_MAR);
+                            SaveMAR(OR2_MAR);
+                            SaveMAR(PR3_MAR);
+                            SetTrigger(HP_TRIGGER, OFF);
+                            SetTrigger(FIELD_MK_1_TRIGGER, OFF);
+                            SetTrigger(FIELD_MK_2_TRIGGER, OFF);
+                            SetTrigger(FIRST_CYCLE_TRIGGER, ON);
+                            break;
+
+                        case FP_SHIFT_R1FILL:
+                            if (!ReadMemory(PR2_MAR)) break;
+                            if (mdr.digit.flag) {
+                                SetTrigger(FIELD_MK_1_TRIGGER, ON);
+                            }
+                            if (TestTrigger(FORCE_FLAG_1_TRIGGER)) {
+                                SetTrigger(FIELD_MK_1_TRIGGER, OFF);
+                            }
+                            IncrementMAR(PR2_MAR, -1);
+                            break;
+
+                        case FP_DIGIT_FORCE:
+                            if (!ReadMemory(OR5_MAR)) break;
+                            SetTrigger(DECR_TRIGGER, ON);
+                            SetTrigger(INCR_TRIGGER, OFF);
+                            if (TestTrigger(L1_MODULO_TRIGGER) && TestTrigger(L2_MODULO_TRIGGER) &&
+                                !TestTrigger(FIRST_CYCLE_TRIGGER) && mdr.digit.flag) {
+                                SetTrigger(FIELD_MK_1_TRIGGER, ON);
+                            }
+                            break;
+
+                        case FP_SCAN_ZERO:
+                            if (!ReadMemory(PR2_MAR)) break;
+                            if (!TestTrigger(HP_TRIGGER)) {
+                                SetTrigger(SCAN_MINUS_TRIGGER, ON);
+                            }
+                            if (mdr.digit.value != 0) {
+                                SetTrigger(SIG_DIGIT_TRIGGER, ON);
+                            }
+                            IncrementMAR(PR2_MAR, 1);
+                            break;
+
+                        case FP_SHIFT_LEFT:
+                            if (!ReadMemory(PR2_MAR)) break;
+                            SetTrigger(DECR_TRIGGER, OFF);
+                            SetTrigger(INCR_TRIGGER, ON);
+                            if (mdr.digit.flag) {
+                                SetTrigger(FIELD_MK_1_TRIGGER, ON);
+                            }
+                            IncrementMAR(PR2_MAR, 1);
+                            break;
+
+                        case FP_ZERO_FILL_L:
+                            if (!ReadMemory(PR3_MAR)) break;
+                            if (mdr.digit.flag) {
+                                SetTrigger(FIELD_MK_2_TRIGGER, ON);
+                            }
+                            SaveMAR(PR3_MAR);
+                            break;
+
+                        case FP_FALSE_TRANSMIT:
+                            if (!ReadMemory(OR3_MAR)) break;
+                            if (!TestTrigger(FIRST_CYCLE_TRIGGER) && mdr.digit.flag) {
+                                SetTrigger(FIELD_MK_1_TRIGGER, ON);
+                            }
+                            IncrementMAR(OR3_MAR, -1);
+                            break;
+
+                        case FP_LOAD_DIVIDEND_ENTRY:
+                            LoadMAR(PR2_MAR);
+                            ClearSingleMAR(OR1_MAR);
+                            ClearSingleMAR(OR2_MAR);
+                            ClearSingleMAR(OR3_MAR);
+                            ClearSingleMAR(PR1_MAR);
+                            SaveMAR(PR2_MAR);
+                            SaveMAR(OR2_MAR);
+                            if (!TestTrigger(EXP_MODIFY_REQD_TRIGGER)) {
+                                IncrementMAR(OR2_MAR, -1);
+                            }
+                            SetTrigger(FIRST_CYCLE_TRIGGER, ON);
+                            SetTrigger(FIELD_MK_1_TRIGGER, OFF);
+                            SetTrigger(FIELD_MK_2_TRIGGER, OFF);
+                            break;
+
+                        case FP_DIVIDE_ENTRY:
+                            SetTrigger(EZ_TRIGGER, ON);
+                            LoadMAR(PR2_MAR);
+                            ClearSingleMAR(OR1_MAR);
+                            ClearSingleMAR(OR2_MAR);
+                            ClearSingleMAR(OR3_MAR);
+                            ClearSingleMAR(PR1_MAR);
+                            SaveMAR(PR2_MAR);
+                            SaveMAR(OR2_MAR);
+                            SaveMAR(OR3_MAR);
+                            break;
+
+                        case FP_FSR_ZERO_FILL:
+                            SetMDR(0);
+                            if (!WriteMemory(OR2_MAR)) break;
+                            IncrementMAR(OR2_MAR, -1);
+                            break;
+
+                        case FP_FSL_SCAN:
+                            if (!ReadMemory(OR1_MAR)) break;
+                            if (TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                                if (mdr.digit.flag) {
+                                    SetTrigger(SCAN_MINUS_TRIGGER, ON);
+                                }
+                            } else {
+                                if (mdr.digit.flag) {
+                                    SetTrigger(FIELD_MK_1_TRIGGER, ON);
+                                }
+                            }
+                            if (!TestTrigger(FIELD_MK_1_TRIGGER)) {
+                                IncrementMAR(OR1_MAR, -1);
+                            }
+                            break;
+
+                        case FP_FSL_ZERO_FILL:
+                            if (!ReadMemory(OR2_MAR)) break;
+                            if (mdr.digit.flag) {
+                                SetTrigger(FIELD_MK_2_TRIGGER, ON);
+                            }
+                            SaveMAR(OR2_MAR);
+                            break;
+
+                        default:
+                            (void)printf("Bad fpMode at E-24: %d\n", fpMode);
+                            runState = CHECK_STOP_STATE;
+                    }
+                    cycle = 25;
+
+                } else {
+                    // Unused cycle
+                    (void)printf("Unused cycle: E-24\n");
+                    runState = CHECK_STOP_STATE;
+                }
                 break;
 
             case 25:    // E-25
 
-                // Unused cycle
-                (void)printf("Bad cycle: E-25\n");
-                runState = CHECK_STOP_STATE;
+                // Process operation
+                if ((opCode == FADD_OPCODE) || (opCode == FSUB_OPCODE) || (opCode == FMUL_OPCODE) || (opCode == FDIV_OPCODE) ||
+                    (opCode == FSL_OPCODE)  || (opCode == FSR_OPCODE)) {
+                    switch (fpMode) {
+
+                        case FP_SCAN_Q: {
+                            SetTrigger(FIRST_CYCLE_TRIGGER, OFF);
+                            if (TestTrigger(SCAN_Q_EXIT_TRIGGER)) {
+                                if (!ReadMemory(OR2_MAR)) break;
+                                if (mdr.digit.flag) {
+                                    SetTrigger(HP_TRIGGER, OFF);
+                                }
+                                cycle = 1;
+                                break;
+                            }
+                            int nextCR1 = mars[CR1_MAR].value + (TestTrigger(CNTR_COMP_TRIGGER) ? 1 : -1);
+                            IncrementMAR(CR1_MAR, TestTrigger(CNTR_COMP_TRIGGER) ? 1 : -1);
+                            if (!TestTrigger(D_GT_99_TRIGGER) && ((nextCR1 % 100) == 0)) {
+                                fpMode = FP_FRACTION_ADD;
+                                SetTrigger(TC_1_TRIGGER, (opCode == FADD_OPCODE) ? ON : OFF);
+                                SetTrigger(HP_TRIGGER, ON);
+                                SetTrigger(EZ_TRIGGER, ON);
+                                SetTrigger(CARRY_IN_TRIGGER, OFF);
+                                SetTrigger(FIRST_CYCLE_TRIGGER, ON);
+                                SetTrigger(FIELD_MK_1_TRIGGER, OFF);
+                                SetTrigger(FIELD_MK_2_TRIGGER, OFF);
+                                cycle = 11;
+                            } else {
+                                cycle = 24;
+                            }
+                            break;
+                        }
+
+                        case FP_EXP_TRANSMIT:
+                            if (!WriteMemory(OR5_MAR)) break;
+                            IncrementMAR(OR5_MAR, -1);
+                            if (TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                                SetTrigger(FIRST_CYCLE_TRIGGER, OFF);
+                                cycle = 24;
+                            } else {
+                                fpMode = FP_SCAN_P;
+                                LoadMAR(OR2_MAR);
+                                SaveMAR(PR2_MAR);
+                                LoadMAR(OR2_MAR);
+                                SaveMAR(PR3_MAR);
+                                SetTrigger(FIRST_CYCLE_TRIGGER, ON);
+                                SetTrigger(FIELD_MK_1_TRIGGER, OFF);
+                                SetTrigger(FIELD_MK_2_TRIGGER, OFF);
+                                IncrementMAR(OR5_MAR, 2);
+                                cycle = 24;
+                            }
+                            break;
+
+                        case FP_SCAN_P: {
+                            SetTrigger(FIRST_CYCLE_TRIGGER, OFF);
+                            if (TestTrigger(FIELD_MK_1_TRIGGER)) {
+                                fpMode = FP_RESULT_TRANSMIT;
+                                SetTrigger(FIELD_MK_1_TRIGGER, OFF);
+                                SetTrigger(FIELD_MK_2_TRIGGER, OFF);
+                                SetTrigger(FIRST_CYCLE_TRIGGER, ON);
+                                cycle = 26;
+                                break;
+                            }
+                            int nextCR1 = mars[CR1_MAR].value + (TestTrigger(CNTR_COMP_TRIGGER) ? 1 : -1);
+                            IncrementMAR(CR1_MAR, TestTrigger(CNTR_COMP_TRIGGER) ? 1 : -1);
+                            if (!TestTrigger(D_GT_99_TRIGGER) && ((nextCR1 % 100) == 0)) {
+                                fpMode = FP_SHIFT_RIGHT;
+                                SetTrigger(DECR_TRIGGER, ON);
+                                SetTrigger(INCR_TRIGGER, OFF);
+                                SetTrigger(FIRST_CYCLE_TRIGGER, ON);
+                                SetTrigger(FIELD_MK_1_TRIGGER, OFF);
+                                SetTrigger(FIELD_MK_2_TRIGGER, OFF);
+                                cycle = 24;
+                            } else {
+                                cycle = 24;
+                            }
+                            break;
+                        }
+
+                        case FP_SHIFT_RIGHT:
+                            SetMDRFlag(TestTrigger(FIRST_CYCLE_TRIGGER) && TestTrigger(SCAN_MINUS_TRIGGER));
+                            if (!WriteMemory(PR3_MAR)) break;
+                            IncrementMAR(PR3_MAR, -1);
+                            SetTrigger(FIRST_CYCLE_TRIGGER, OFF);
+                            if (TestTrigger(FIELD_MK_1_TRIGGER)) {
+                                fpMode = FP_ZERO_FILL_R;
+                            }
+                            cycle = 24;
+                            break;
+
+                        case FP_ZERO_FILL_R: {
+                            bool done = TestTrigger(FIELD_MK_2_TRIGGER);
+                            if (!done) {
+                                if (!ReadMemory(PR3_MAR)) break;
+                            }
+                            SetMDR(done ? 0x10 : 0);
+                            if (!WriteMemory(PR3_MAR)) break;
+                            IncrementMAR(PR3_MAR, -1);
+                            if (done) {
+                                fpMode = FP_FRACTION_ADD;
+                                SetTrigger(TC_1_TRIGGER, (opCode == FADD_OPCODE) ? ON : OFF);
+                                SetTrigger(HP_TRIGGER, ON);
+                                SetTrigger(EZ_TRIGGER, ON);
+                                SetTrigger(CARRY_IN_TRIGGER, OFF);
+                                SetTrigger(FIRST_CYCLE_TRIGGER, ON);
+                                SetTrigger(FIELD_MK_1_TRIGGER, OFF);
+                                SetTrigger(FIELD_MK_2_TRIGGER, OFF);
+                                cycle = 11;
+                            } else {
+                                cycle = 24;
+                            }
+                            break;
+                        }
+
+                        case FP_EXP_MODIFY_ENTRY:
+                            SetTrigger(HP_TRIGGER, ON);
+                            SetTrigger(EZ_TRIGGER, ON);
+                            SetTrigger(CARRY_IN_TRIGGER, OFF);
+                            SetTrigger(FIELD_MK_1_TRIGGER, OFF);
+                            SetTrigger(FIELD_MK_2_TRIGGER, OFF);
+                            SetTrigger(FIRST_CYCLE_TRIGGER, ON);
+                            fpMode = FP_EXP_MODIFY;
+                            cycle = 21;
+                            break;
+
+                        case FP_EXP_MODIFY_EXIT:
+                            LoadMAR(OR2_MAR);
+                            SaveMAR(PR2_MAR);
+                            IncrementMAR(PR2_MAR, -1);
+                            SetTrigger(HP_TRIGGER, TestTrigger(HP_AUX_TRIGGER));
+                            if (opCode == FMUL_OPCODE) {
+                                LoadMAR(PR1_MAR);
+                                SaveMAR(OR1_MAR);
+                                if (TestTrigger(EXP_MODIFY_REQD_TRIGGER)) {
+                                    IncrementMAR(OR1_MAR, 1);
+                                }
+                            } else if (opCode == FDIV_OPCODE) {
+                                LoadMAR(PR1_MAR);
+                                SaveMAR(OR1_MAR);
+                            }
+                            if (TestTrigger(NORM_SHIFT_R_TRIGGER)) {
+                                if (TestTrigger(OFLO_UNFLO_TRIGGER) || TestTrigger(UNFLO_ZERO_TRIGGER)) {
+                                    fpMode = FP_DIGIT_FORCE;
+                                    SetTrigger(FIRST_CYCLE_TRIGGER, ON);
+                                    SetTrigger(FIELD_MK_1_TRIGGER, OFF);
+                                    SetTrigger(FIELD_MK_2_TRIGGER, OFF);
+                                    SetTrigger(L1_MODULO_TRIGGER, OFF);
+                                    SetTrigger(L2_MODULO_TRIGGER, OFF);
+                                } else {
+                                    fpMode = FP_SHIFT_R1FILL;
+                                    SetTrigger(DECR_TRIGGER, ON);
+                                    SetTrigger(INCR_TRIGGER, OFF);
+                                    SetTrigger(FIRST_CYCLE_TRIGGER, ON);
+                                    SetTrigger(FIELD_MK_1_TRIGGER, OFF);
+                                    SetTrigger(FIELD_MK_2_TRIGGER, OFF);
+                                    SetTrigger(FORCE_FLAG_1_TRIGGER, OFF);
+                                }
+                                cycle = 24;
+                            } else {
+                                if (TestTrigger(OFLO_UNFLO_TRIGGER) || TestTrigger(UNFLO_ZERO_TRIGGER)) {
+                                    fpMode = FP_DIGIT_FORCE;
+                                    SetTrigger(FIRST_CYCLE_TRIGGER, ON);
+                                    SetTrigger(FIELD_MK_1_TRIGGER, OFF);
+                                    SetTrigger(FIELD_MK_2_TRIGGER, OFF);
+                                    SetTrigger(L1_MODULO_TRIGGER, OFF);
+                                    SetTrigger(L2_MODULO_TRIGGER, OFF);
+                                    cycle = 24;
+                                } else if ((opCode == FMUL_OPCODE) || (opCode == FDIV_OPCODE)) {
+                                    fpMode = FP_PRODUCT_TRANSMIT;
+                                    SetTrigger(FIRST_CYCLE_TRIGGER, ON);
+                                    SetTrigger(FIELD_MK_1_TRIGGER, OFF);
+                                    SetTrigger(FIELD_MK_2_TRIGGER, OFF);
+                                    cycle = 26;
+                                } else {
+                                    cycle = 1;
+                                }
+                            }
+                            break;
+
+                        case FP_SHIFT_R1FILL:
+                            SetMDRFlag(TestTrigger(FIRST_CYCLE_TRIGGER) && !TestTrigger(HP_TRIGGER));
+                            if (!WriteMemory(PR3_MAR)) break;
+                            IncrementMAR(PR3_MAR, -1);
+                            SetTrigger(FIRST_CYCLE_TRIGGER, OFF);
+                            if (TestTrigger(FORCE_FLAG_1_TRIGGER)) {
+                                cycle = 1;
+                            } else if (TestTrigger(FIELD_MK_1_TRIGGER)) {
+                                SetMDR(0x11);
+                                if (!WriteMemory(PR3_MAR)) break;
+                                IncrementMAR(PR3_MAR, -1);
+                                SetTrigger(FORCE_FLAG_1_TRIGGER, ON);
+                                cycle = 1;
+                            } else {
+                                cycle = 24;
+                            }
+                            break;
+
+                        case FP_DIGIT_FORCE: {
+                            bool infinity = !TestTrigger(UNFLO_ZERO_TRIGGER);
+                            if (!TestTrigger(L1_MODULO_TRIGGER)) {
+                                SetMDR(infinity ? 9 : (0x10 | 9));
+                                if (!WriteMemory(OR5_MAR)) break;
+                                IncrementMAR(OR5_MAR, -1);
+                                if (!infinity) {
+                                    SetTrigger(EZ_TRIGGER, ON);
+                                }
+                                SetTrigger(L1_MODULO_TRIGGER, ON);
+                                cycle = 24;
+
+                            } else if (!TestTrigger(L2_MODULO_TRIGGER)) {
+                                SetMDR(0x10 | 9);
+                                if (!WriteMemory(OR5_MAR)) break;
+                                IncrementMAR(OR5_MAR, -1);
+                                SetTrigger(L2_MODULO_TRIGGER, ON);
+                                cycle = 24;
+
+                            } else if (TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                                SetMDR(infinity ? ((TestTrigger(HP_TRIGGER) ? 0 : 0x10) | 9) : 0);
+                                if (!WriteMemory(OR5_MAR)) break;
+                                IncrementMAR(OR5_MAR, -1);
+                                SetTrigger(FIRST_CYCLE_TRIGGER, OFF);
+                                cycle = 24;
+
+                            } else if (!TestTrigger(FIELD_MK_1_TRIGGER)) {
+                                SetMDR(infinity ? 9 : 0);
+                                if (!WriteMemory(OR5_MAR)) break;
+                                IncrementMAR(OR5_MAR, -1);
+                                cycle = 24;
+
+                            } else {
+                                SetMDR((infinity ? 9 : 0) | 0x10);
+                                if (!WriteMemory(OR5_MAR)) break;
+                                if (TestTrigger(OFLO_UNFLO_TRIGGER)) {
+                                    SetTrigger(EXP_CHK_TRIGGER, ON);
+                                }
+                                cycle = 1;
+                            }
+                            break;
+                        }
+
+                        case FP_SCAN_ZERO:
+                            SetTrigger(CNTR_COMP_TRIGGER, OFF);
+                            if (!TestTrigger(SIG_DIGIT_TRIGGER)) {
+                                IncrementMAR(CR1_MAR, 1);
+                            }
+                            SetTrigger(FIRST_CYCLE_TRIGGER, OFF);
+                            if (TestTrigger(SIG_DIGIT_TRIGGER)) {
+                                IncrementMAR(PR2_MAR, -1);
+                                fpMode = FP_SHIFT_LEFT;
+                                SetTrigger(FIRST_CYCLE_TRIGGER, ON);
+                                SetTrigger(FIELD_MK_1_TRIGGER, OFF);
+                            }
+                            cycle = 24;
+                            break;
+
+                        case FP_SHIFT_LEFT:
+                            if (TestTrigger(FIELD_MK_1_TRIGGER) && !TestTrigger(SCAN_MINUS_TRIGGER)) {
+                                fpMode = FP_ZERO_FILL_L;
+                            } else {
+                                if (TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                                    SetMDRFlag(TRUE);
+                                } else if (TestTrigger(FIELD_MK_1_TRIGGER)) {
+                                    SetMDRFlag(FALSE);
+                                }
+                                if (!WriteMemory(PR3_MAR)) break;
+                                IncrementMAR(PR3_MAR, 1);
+                                if (TestTrigger(FIELD_MK_1_TRIGGER)) {
+                                    fpMode = FP_ZERO_FILL_L;
+                                }
+                            }
+                            SetTrigger(FIRST_CYCLE_TRIGGER, OFF);
+                            cycle = 24;
+                            break;
+
+                        case FP_ZERO_FILL_L: {
+                            bool negative = TestTrigger(SCAN_MINUS_TRIGGER);
+                            if (negative) {
+                                SetMDR(TestTrigger(FIELD_MK_2_TRIGGER) ? 0x10 : 0);
+                                if (!WriteMemory(PR3_MAR)) break;
+                                IncrementMAR(PR3_MAR, 1);
+                            } else {
+                                if (TestTrigger(FIELD_MK_2_TRIGGER)) {
+                                    if (!WriteMemory(PR3_MAR)) break;
+                                } else {
+                                    SetMDR(0);
+                                    if (!WriteMemory(PR3_MAR)) break;
+                                }
+                                IncrementMAR(PR3_MAR, 1);
+                            }
+                            if (TestTrigger(FIELD_MK_2_TRIGGER)) {
+                                fpMode = FP_EXP_MODIFY_ENTRY;
+                            }
+                            cycle = 24;
+                            break;
+                        }
+
+                        case FP_FALSE_TRANSMIT:
+                            if (TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                                ClearSingleMAR(PR2_MAR);
+                                SetMAR(MAR_MAR, 100);
+                                SaveMAR(PR2_MAR);
+                                IncrementMAR(PR2_MAR, -1);
+                                SetTrigger(FIRST_CYCLE_TRIGGER, OFF);
+                            } else {
+                                LoadMAR(PR2_MAR);
+                                SaveMAR(PR2_MAR);
+                                IncrementMAR(PR2_MAR, -1);
+                            }
+                            if (TestTrigger(FIELD_MK_1_TRIGGER)) {
+                                fpMode = FP_LOAD_DIVIDEND_ENTRY;
+                            }
+                            cycle = 24;
+                            break;
+
+                        case FP_LOAD_DIVIDEND_ENTRY:
+                            LoadMAR(PR3_MAR);
+                            SaveMAR(OR1_MAR);
+                            fpMode = FP_LOAD_DIVIDEND;
+                            cycle = 32;
+                            break;
+
+                        case FP_DIVIDE_ENTRY:
+                            LoadMAR(OR4_MAR);
+                            SaveMAR(OR1_MAR);
+                            SaveMAR(PR1_MAR);
+                            SetTrigger(HP_TRIGGER, !TestTrigger(DIV_SIGN_TRIGGER));
+                            fpMode = FP_DIVIDE;
+                            cycle = 11;
+                            break;
+
+                        case FP_FSR_ZERO_FILL:
+                            if (mars[OR2_MAR].value == mars[OR1_MAR].value) {
+                                cycle = 1;
+                            } else {
+                                cycle = 24;
+                            }
+                            break;
+
+                        case FP_FSL_SCAN:
+                            SetTrigger(FIRST_CYCLE_TRIGGER, OFF);
+                            if (TestTrigger(FIELD_MK_1_TRIGGER)) {
+                                SetMDRFlag(FALSE);
+                                if (!WriteMemory(OR1_MAR)) break;
+                                fpMode = FP_FSL_TRANSMIT;
+                                SetTrigger(FIELD_MK_1_TRIGGER, OFF);
+                                SetTrigger(FIRST_CYCLE_TRIGGER, ON);
+                                SetTrigger(DECR_TRIGGER, OFF);
+                                SetTrigger(INCR_TRIGGER, ON);
+                                cycle = 26;
+                            } else {
+                                cycle = 24;
+                            }
+                            break;
+
+                        case FP_FSL_ZERO_FILL: {
+                            bool negative = TestTrigger(SCAN_MINUS_TRIGGER);
+                            bool found = TestTrigger(FIELD_MK_2_TRIGGER);
+                            if (negative) {
+                                SetMDR(found ? 0x10 : 0);
+                                if (!WriteMemory(OR2_MAR)) break;
+                                IncrementMAR(OR2_MAR, 1);
+                            } else {
+                                if (!found) {
+                                    SetMDR(0);
+                                }
+                                if (!WriteMemory(OR2_MAR)) break;
+                                IncrementMAR(OR2_MAR, 1);
+                            }
+                            cycle = found ? 1 : 24;
+                            break;
+                        }
+
+                        case FP_FSR_TRANSMIT:
+                            cycle = 26;
+                            break;
+
+                        default:
+                            (void)printf("Bad fpMode at E-25: %d\n", fpMode);
+                            runState = CHECK_STOP_STATE;
+                    }
+
+                } else {
+                    // Unused cycle
+                    (void)printf("Unused cycle: E-25\n");
+                    runState = CHECK_STOP_STATE;
+                }
                 break;
 
-            case 26:    // E-26
+            case 26:    // E-26  <=  TD, TDM, TF, TFL, TFM, TNF, TNS, TR
 
                 // Process operation
-                if ((opCode == TF_OPCODE) || (opCode == TFM_OPCODE) || (opCode == BT_OPCODE) ||
-                    (opCode == BTM_OPCODE)) {
+                if ((opCode == TF_OPCODE) || (opCode == TFM_OPCODE) || (opCode == BT_OPCODE) || (opCode == BTM_OPCODE)) {
                     if (!ReadMemory(OR1_MAR)) break;
                     IncrementMAR(OR1_MAR, -1);
+                    if (mdr.digit.flag && !TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                        SetTrigger(FIELD_MK_1_TRIGGER, ON);
+                    }
+
+                } else if ((opCode == TFL_OPCODE) || (opCode == BTFL_OPCODE)) {
+                    if (!ReadMemory(OR1_MAR)) break;
+                    IncrementMAR(OR1_MAR, -1);
+                    if (TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                        if (!TestTrigger(L1_MODULO_TRIGGER) && !TestTrigger(L2_MODULO_TRIGGER)) {
+                            SetTrigger(L1_MODULO_TRIGGER, ON);
+                            SetTrigger(L2_MODULO_TRIGGER, ON);
+                        } else if (TestTrigger(L1_MODULO_TRIGGER)) {
+                            SetTrigger(L1_MODULO_TRIGGER, OFF);
+                        } else {
+                            SetTrigger(L2_MODULO_TRIGGER, OFF);
+                        }
+                    }
                     if (mdr.digit.flag && !TestTrigger(FIRST_CYCLE_TRIGGER)) {
                         SetTrigger(FIELD_MK_1_TRIGGER, ON);
                     }
@@ -1392,7 +2649,8 @@ void *Simulator(void *arg) {
                     if (!ReadMemory(OR1_MAR)) break;
                     SaveMAR(OR1_MAR);
 
-                } else if ((opCode == LD_OPCODE) || (opCode == LDM_OPCODE)) {
+                } else if ((opCode == LD_OPCODE) || (opCode == LDM_OPCODE) ||
+                           ((opCode == FDIV_OPCODE) && (fpMode == FP_LOAD_DIVIDEND))) {
                     if (!ReadMemory(OR1_MAR)) break;
                     IncrementMAR(OR1_MAR, -1);
                     if (mdr.digit.flag && !TestTrigger(FIRST_CYCLE_TRIGGER)) {
@@ -1432,33 +2690,55 @@ void *Simulator(void *arg) {
                     }
 
                 } else if (opCode == TNF_OPCODE) {
+                    if (!TestTrigger(TC_1_TRIGGER)) {
+                        if (!ReadMemory(OR1_MAR)) break;
+                        if (!TestTrigger(FIRST_CYCLE_TRIGGER) && mdr.digit.flag) {
+                            SetTrigger(FIELD_MK_1_TRIGGER, ON);
+                        }
+                        IncrementMAR(OR1_MAR, -1);
+                    }
+
+                } else if ((opCode == FADD_OPCODE) || (opCode == FSUB_OPCODE)) {
+                    if (!ReadMemory(OR1_MAR)) break;
                     if (TestTrigger(FIRST_CYCLE_TRIGGER)) {
-                        if (TestTrigger(TC_1_TRIGGER)) {
-                            SetTrigger(TC_1_TRIGGER, OFF);
-                            if (!ReadMemory(OR1_MAR)) break;
-                            SaveMAR(OR1_MAR);
-                            if (mdr.digit.flag) {
-                                SetTrigger(FIELD_MK_2_TRIGGER, ON);
-                            }
-                        } else {
-                            SetTrigger(TC_1_TRIGGER, ON);
-                            if (!ReadMemory(OR1_MAR)) break;
-                            IncrementMAR(OR1_MAR, -1);
+                        if (mdr.digit.flag) {
+                            SetTrigger(HP_TRIGGER, ON);
                         }
                     } else {
-                        if (TestTrigger(TC_1_TRIGGER)) {
-                            SetTrigger(TC_1_TRIGGER, OFF);
-                            if (!ReadMemory(OR1_MAR)) break;
-                            SaveMAR(OR1_MAR);
-                            if (mdr.digit.flag) {
-                                SetTrigger(FIELD_MK_1_TRIGGER, ON);
-                            }
-                        } else {
-                            SetTrigger(TC_1_TRIGGER, ON);
-                            if (!ReadMemory(OR1_MAR)) break;
-                            IncrementMAR(OR1_MAR, -1);
+                        if (mdr.digit.flag) {
+                            SetTrigger(FIELD_MK_1_TRIGGER, ON);
                         }
                     }
+                    IncrementMAR(OR1_MAR, -1);
+
+                } else if (opCode == FMUL_OPCODE) {
+                    if (!ReadMemory(OR1_MAR)) break;
+                    if (!TestTrigger(FIRST_CYCLE_TRIGGER) && mdr.digit.flag) {
+                        if (TestTrigger(MULT_CORRECT_TRIGGER)) {
+                            mdr.digit.flag = 0;
+                            SetTrigger(MULT_CORRECT_TRIGGER, OFF);
+                        } else {
+                            SetTrigger(FIELD_MK_1_TRIGGER, ON);
+                        }
+                    }
+                    IncrementMAR(OR1_MAR, -1);
+
+                } else if ((opCode == FDIV_OPCODE) && (fpMode == FP_PRODUCT_TRANSMIT)) {
+                    if (!ReadMemory(OR1_MAR)) break;
+                    if (!TestTrigger(FIRST_CYCLE_TRIGGER) && mdr.digit.flag) {
+                        SetTrigger(FIELD_MK_1_TRIGGER, ON);
+                    }
+                    IncrementMAR(OR1_MAR, -1);
+
+                } else if (opCode == FSR_OPCODE) {
+                    if (!ReadMemory(OR1_MAR)) break;
+                    IncrementMAR(OR1_MAR, -1);
+                    if (mdr.digit.flag && !TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                        SetTrigger(FIELD_MK_1_TRIGGER, ON);
+                    }
+
+                } else if (opCode == FSL_OPCODE) {
+                    if (!ReadMemory(OR1_MAR)) break;
                 }
 
                 // Set next cycle
@@ -1468,11 +2748,17 @@ void *Simulator(void *arg) {
             case 27:    // E-27
 
                 // Process operation
-                if ((opCode == TF_OPCODE) || (opCode == TFM_OPCODE) || (opCode == BT_OPCODE) ||
-                    (opCode == BTM_OPCODE)) {
+                if ((opCode == TF_OPCODE) || (opCode == TFM_OPCODE) || (opCode == BT_OPCODE) || (opCode == BTM_OPCODE)) {
                     if (!WriteMemory(OR2_MAR)) break;
                     IncrementMAR(OR2_MAR, -1);
                     SetTrigger(FIRST_CYCLE_TRIGGER, OFF);
+
+                } else if ((opCode == TFL_OPCODE) || (opCode == BTFL_OPCODE)) {
+                    if (!WriteMemory(OR2_MAR)) break;
+                    IncrementMAR(OR2_MAR, -1);
+                    if (!TestTrigger(L1_MODULO_TRIGGER) && !TestTrigger(L2_MODULO_TRIGGER)) {
+                        SetTrigger(FIRST_CYCLE_TRIGGER, OFF);
+                    }
 
                 } else if (opCode == TR_OPCODE) {
                     if (!WriteMemory(OR2_MAR)) break;
@@ -1483,7 +2769,8 @@ void *Simulator(void *arg) {
                     if (!WriteMemory(OR2_MAR)) break;
                     SaveMAR(OR2_MAR);
 
-                } else if ((opCode == LD_OPCODE) || (opCode == LDM_OPCODE)) {
+                } else if ((opCode == LD_OPCODE) || (opCode == LDM_OPCODE) ||
+                           ((opCode == FDIV_OPCODE) && (fpMode == FP_LOAD_DIVIDEND))) {
                     if (mdr.digit.flag && TestTrigger(FIRST_CYCLE_TRIGGER)) {
                         SetTrigger(DIV_SIGN_TRIGGER, ON);
                         SetMDRFlag(FALSE);
@@ -1518,31 +2805,73 @@ void *Simulator(void *arg) {
                     }
 
                 } else if (opCode == TNF_OPCODE) {
-                    if (TestTrigger(FIRST_CYCLE_TRIGGER)) {
-                        if (TestTrigger(TC_1_TRIGGER)) {
-                            SetTrigger(FIRST_CYCLE_TRIGGER, OFF);
-                            if (TestTrigger(FIELD_MK_2_TRIGGER)) {
-                                SetMDR(5);
-                            } else {
-                                SetMDR(7);
-                            }
-                            if (!WriteMemory(OR2_MAR)) break;
-                            IncrementMAR(OR2_MAR, -1);
-                        } else {
-                            SetMDRFlag(FALSE);
-                            if (!WriteMemory(OR2_MAR)) break;
-                            IncrementMAR(OR2_MAR, -1);
+                    if (!TestTrigger(TC_1_TRIGGER)) {
+                        if (TestTrigger(FIRST_CYCLE_TRIGGER) && mdr.digit.flag) {
+                            SetTrigger(FIELD_MK_2_TRIGGER, ON);
                         }
+                        SetMDRFlag(FALSE);
+                        if (!WriteMemory(OR2_MAR)) break;
+                        IncrementMAR(OR2_MAR, -1);
+                        SetTrigger(TC_1_TRIGGER, ON);
                     } else {
-                        if (TestTrigger(TC_1_TRIGGER)) {
-                            SetMDR(7);
-                            if (!WriteMemory(OR2_MAR)) break;
-                            IncrementMAR(OR2_MAR, -1);
+                        if (TestTrigger(FIRST_CYCLE_TRIGGER) && TestTrigger(FIELD_MK_2_TRIGGER)) {
+                            SetMDR(5);
                         } else {
-                            SetMDRFlag(FALSE);
-                            if (!WriteMemory(OR2_MAR)) break;
-                            IncrementMAR(OR2_MAR, -1);
+                            SetMDR(7);
                         }
+                        if (!WriteMemory(OR2_MAR)) break;
+                        IncrementMAR(OR2_MAR, -1);
+                        SetTrigger(TC_1_TRIGGER, OFF);
+                        SetTrigger(FIRST_CYCLE_TRIGGER, OFF);
+                        SetTrigger(FIELD_MK_2_TRIGGER, OFF);
+                    }
+
+                } else if ((opCode == FADD_OPCODE) || (opCode == FSUB_OPCODE)) {
+                    if (TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                        if (opCode == FADD_OPCODE) {
+                            SetTrigger(HP_TRIGGER, !TestTrigger(HP_TRIGGER));
+                        }
+                        SetMDRFlag(!TestTrigger(HP_TRIGGER));
+                        if (!WriteMemory(OR2_MAR)) break;
+                        IncrementMAR(OR2_MAR, -1);
+                        SetTrigger(FIRST_CYCLE_TRIGGER, OFF);
+                    } else {
+                        if (!WriteMemory(OR2_MAR)) break;
+                        IncrementMAR(OR2_MAR, -1);
+                    }
+
+                } else if (opCode == FMUL_OPCODE) {
+                    if (TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                        SetMDRFlag(!TestTrigger(HP_TRIGGER));
+                        SetTrigger(FIRST_CYCLE_TRIGGER, OFF);
+                    }
+                    if (!WriteMemory(OR2_MAR)) break;
+                    IncrementMAR(OR2_MAR, -1);
+
+                } else if ((opCode == FDIV_OPCODE) && (fpMode == FP_PRODUCT_TRANSMIT)) {
+                    SetTrigger(FIRST_CYCLE_TRIGGER, OFF);
+                    if (!WriteMemory(OR2_MAR)) break;
+                    IncrementMAR(OR2_MAR, -1);
+
+                } else if (opCode == FSR_OPCODE) {
+                    if (TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                        SetMDRFlag(TestTrigger(SCAN_MINUS_TRIGGER));
+                    }
+                    if (!WriteMemory(OR2_MAR)) break;
+                    IncrementMAR(OR2_MAR, -1);
+                    SetTrigger(FIRST_CYCLE_TRIGGER, OFF);
+
+                } else if (opCode == FSL_OPCODE) {
+                    if (TestTrigger(FIRST_CYCLE_TRIGGER)) {
+                        SetMDRFlag(TRUE);
+                    }
+                    bool lastDigit = (mars[OR1_MAR].value == mars[PR1_MAR].value);
+                    if (!WriteMemory(OR2_MAR)) break;
+                    IncrementMAR(OR1_MAR, 1);
+                    IncrementMAR(OR2_MAR, 1);
+                    SetTrigger(FIRST_CYCLE_TRIGGER, OFF);
+                    if (lastDigit) {
+                        fpMode = FP_FSL_ZERO_FILL;
                     }
                 }
 
@@ -1550,8 +2879,8 @@ void *Simulator(void *arg) {
                 if ((opCode == TD_OPCODE) || (opCode == TDM_OPCODE)) {
                     cycle = 1;
 
-                } else if ((opCode == TF_OPCODE) || (opCode == TFM_OPCODE) || (opCode == BT_OPCODE) ||
-                           (opCode == BTM_OPCODE)) {
+                } else if ((opCode == TF_OPCODE)  || (opCode == TFM_OPCODE) || (opCode == BT_OPCODE) || (opCode == BTM_OPCODE) ||
+                           (opCode == TFL_OPCODE) || (opCode == BTFL_OPCODE)) {
                     if (TestTrigger(FIELD_MK_1_TRIGGER)) {
                         cycle = 1;
                     } else {
@@ -1572,16 +2901,74 @@ void *Simulator(void *arg) {
                         cycle = 26;
                     }
 
-                } else if ((opCode == TNS_OPCODE) || (opCode == TNF_OPCODE)) {
+                } else if ((opCode == FDIV_OPCODE) && (fpMode == FP_LOAD_DIVIDEND)) {
+                    if (TestTrigger(FIELD_MK_1_TRIGGER)) {
+                        fpMode = FP_DIVIDE_ENTRY;
+                        SetTrigger(FIRST_CYCLE_TRIGGER, ON);
+                        SetTrigger(FIELD_MK_1_TRIGGER, OFF);
+                        SetTrigger(FIELD_MK_2_TRIGGER, OFF);
+                        cycle = 24;
+                    } else {
+                        cycle = 26;
+                    }
+
+                } else if (opCode == TNS_OPCODE) {
                     if (TestTrigger(FIELD_MK_1_TRIGGER) && TestTrigger(TC_1_TRIGGER)) {
                         cycle = 1;
+                    } else {
+                        cycle = 26;
+                    }
+
+                } else if (opCode == TNF_OPCODE) {
+                    if (TestTrigger(FIELD_MK_1_TRIGGER) && !TestTrigger(TC_1_TRIGGER)) {
+                        cycle = 1;
+                    } else {
+                        cycle = 26;
+                    }
+
+                } else if ((opCode == FADD_OPCODE) || (opCode == FSUB_OPCODE)) {
+                    SetTrigger(FP_EXIT_TRIGGER, TestTrigger(FIELD_MK_1_TRIGGER));
+                    if (TestTrigger(FIELD_MK_1_TRIGGER)) {
+                        cycle = 1;
+                    } else {
+                        cycle = 26;
+                    }
+
+                } else if (opCode == FMUL_OPCODE) {
+                    SetTrigger(FP_EXIT_TRIGGER, TestTrigger(FIELD_MK_1_TRIGGER));
+                    if (TestTrigger(FIELD_MK_1_TRIGGER) && !TestTrigger(MULT_CORRECT_TRIGGER)) {
+                        cycle = 1;
+                    } else {
+                        cycle = 26;
+                    }
+
+                } else if ((opCode == FDIV_OPCODE) && (fpMode == FP_PRODUCT_TRANSMIT)) {
+                    SetTrigger(FP_EXIT_TRIGGER, TestTrigger(FIELD_MK_1_TRIGGER));
+                    if (TestTrigger(FIELD_MK_1_TRIGGER)) {
+                        cycle = 1;
+                    } else {
+                        cycle = 26;
+                    }
+
+                } else if (opCode == FSR_OPCODE) {
+                    if (TestTrigger(FIELD_MK_1_TRIGGER)) {
+                        fpMode = FP_FSR_ZERO_FILL;
+                        SetTrigger(FIELD_MK_1_TRIGGER, OFF);
+                        cycle = 24;
+                    } else {
+                        cycle = 26;
+                    }
+
+                } else if (opCode == FSL_OPCODE) {
+                    if (fpMode == FP_FSL_ZERO_FILL) {
+                        cycle = 24;
                     } else {
                         cycle = 26;
                     }
                 }
                 break;
 
-            case 28:    // E-28
+            case 28:    // E-28  <=  BD, BNF, BNG, BNR, CF, MF, SF
 
                 // Process operation
                 if ((opCode == SF_OPCODE) || (opCode == CF_OPCODE)) {
@@ -1709,7 +3096,7 @@ void *Simulator(void *arg) {
                 }
                 break;
 
-            case 30:    // E-30
+            case 30:    // E-30  <=  DN, WA, WN
 
                 // Process operation
                 if ((ioState == RUNNING_IO_STATE) ||
@@ -2054,7 +3441,7 @@ void *Simulator(void *arg) {
                 }
                 break;
 
-            case 31:    // E-31
+            case 31:    // E-31  <=  RA, RN
 
                 // Read memory per OR2
                 if (!ReadMemory(OR2_MAR)) break;
@@ -2064,13 +3451,15 @@ void *Simulator(void *arg) {
                 cycle = 30;
                 break;
 
-            case 32:    // E-32
+            case 32:    // E-32  <=  LD, LDM, M, MM
 
                 // Initialize on first entry
                 if (!TestTrigger(FIRST_CYCLE_TRIGGER)) {
                     SetTrigger(FIRST_CYCLE_TRIGGER, ON);
                     SetTrigger(HP_TRIGGER, ON);
-                    if ((opCode == M_OPCODE) || (opCode == MM_OPCODE)) SetTrigger(EZ_TRIGGER, ON);
+                    if ((opCode == M_OPCODE) || (opCode == MM_OPCODE) || (opCode == FMUL_OPCODE)) {
+                        SetTrigger(EZ_TRIGGER, ON);
+                    }
                     SetMAR(PR1_MAR, 80);
                 }
 
@@ -2091,10 +3480,10 @@ void *Simulator(void *arg) {
                 if (mars[PR1_MAR].value < 99) {
                     cycle = 32;
 
-                } else if ((opCode == M_OPCODE) || (opCode == MM_OPCODE)) {
+                } else if ((opCode == M_OPCODE) || (opCode == MM_OPCODE) || (opCode == FMUL_OPCODE)) {
                     cycle = 33;
 
-                } else /* opCode == LD_OPCODE || opCode == LDM_OPCODE */{
+                } else /* ((opCode == LD_OPCODE) || (opCode == LDM_OPCODE)) */{
                     cycle = 26;
                 }
                 break;
@@ -2229,6 +3618,12 @@ void *Simulator(void *arg) {
                     mdr.digit.flag = 0;
                 }
 
+                if ((opCode == FMUL_OPCODE) && TestTrigger(FIELD_MK_1_TRIGGER) &&
+                    TestTrigger(FIELD_MK_2_TRIGGER) && (dr.digit01.value == 0)) {
+                    SetTrigger(EXP_MODIFY_REQD_TRIGGER, ON);
+                    mdr.digit.flag = 1;
+                }
+
                 // Store 1st sum digit in product area
                 if (!WriteMemory(PR2_MAR)) break;
                 IncrementMAR(PR2_MAR, -1);
@@ -2289,6 +3684,14 @@ void *Simulator(void *arg) {
 
             case 41:    // E-41
 
+                // Set auxiliary triggers
+                if ((opCode == FMUL_OPCODE) && TestTrigger(FIELD_MK_1_TRIGGER) &&
+                    TestTrigger(FIELD_MK_2_TRIGGER) && TestTrigger(EXP_MODIFY_REQD_TRIGGER) &&
+                    (mdr.digit.value != 0)) {
+                    SetTrigger(EXP_MODIFY_REQD_TRIGGER, OFF);
+                    SetTrigger(MULT_CORRECT_TRIGGER, ON);
+                }
+
                 // Set end of product field mark
                 if (TestTrigger(FIELD_MK_1_TRIGGER) && TestTrigger(FIELD_MK_2_TRIGGER)) {
                     mdr.digit.flag = 1;
@@ -2306,8 +3709,10 @@ void *Simulator(void *arg) {
                 }
 
                 // Set next cycle
-                if (TestTrigger(CARRY_OUT_TRIGGER) || TestTrigger(FIELD_MK_2_TRIGGER)) {
-                    cycle = 19;
+                if (TestTrigger(CARRY_OUT_TRIGGER)) {
+                    cycle = 39;
+                } else if (TestTrigger(FIELD_MK_2_TRIGGER)) {
+                    cycle = TestTrigger(FIELD_MK_1_TRIGGER) ? 19 : 33;
                 } else {
                     cycle = 34;
                 }
@@ -2343,7 +3748,17 @@ void *Simulator(void *arg) {
 
                 // Set next cycle
                 if (TestTrigger(DIV_LAST_CYC_TRIGGER)) {
-                    cycle = 1;
+                    if (opCode == FDIV_OPCODE) {
+                        if (TestTrigger(EZ_TRIGGER)) {
+                            SetTrigger(UNFLO_ZERO_TRIGGER, ON);
+                            SetTrigger(OFLO_UNFLO_TRIGGER, OFF);
+                            SetTrigger(HP_TRIGGER, OFF);
+                        }
+                        fpMode = FP_EXP_MODIFY_ENTRY;
+                        cycle = 24;
+                    } else {
+                        cycle = 1;
+                    }
                 } else {
                     cycle = 44;
                 }
@@ -2354,7 +3769,6 @@ void *Simulator(void *arg) {
                 // Process operation
                 LoadMAR(OR3_MAR);
                 SaveMAR(OR2_MAR);
-                // if (mar.value == 99) {
                 if ((mar.digit10000.value == 0) &&
                     (mar.digit00010.value == 9) &&
                     (mar.digit00001.value == 9)) {
@@ -2390,7 +3804,7 @@ void *Simulator(void *arg) {
                 }
                 break;
 
-            case 46:    // E-46
+            case 46:    // E-46, IA-1  <=  Indirect Addressing
 
                 // Process operation
                 if (!TestTrigger(P_Q_TRIGGER) && !TestTrigger(NEXT_IA_TRIGGER)) {
@@ -2406,7 +3820,7 @@ void *Simulator(void *arg) {
                 }
                 break;
 
-            case 47:    // E-47
+            case 47:    // E-47, IA-2
 
                 // Process operation
                 if (TestTrigger(P_Q_TRIGGER)) {
@@ -2445,7 +3859,7 @@ void *Simulator(void *arg) {
                 cycle = 48;
                 break;
 
-            case 48:    // E-48
+            case 48:    // E-48, IA-3
 
                 // Process operation
                 if (!ReadPairMemory(PR3_MAR, ANY)) break;
@@ -2480,7 +3894,7 @@ void *Simulator(void *arg) {
                 cycle = 49;
                 break;
 
-            case 49:    // E-49
+            case 49:    // E-49, IA-4
 
                 // Process operation
                 if (!ReadPairMemory(PR3_MAR, ANY)) break;
@@ -2547,41 +3961,41 @@ void *Simulator(void *arg) {
 
             case 50:    // E-50
 
-                (void)printf("Unimplemented cycle: E-50\n");
+                (void)printf("Unused cycle: E-50\n");
                 runState = CHECK_STOP_STATE;
                 break;
 
             case 51:    // E-51
 
-                (void)printf("Unimplemented cycle: E-51\n");
+                (void)printf("Unused cycle: E-51\n");
                 runState = CHECK_STOP_STATE;
                 break;
 
             case 52:    // E-52
 
-                (void)printf("Unimplemented cycle: E-52\n");
+                (void)printf("Unused cycle: E-52\n");
                 runState = CHECK_STOP_STATE;
                 break;
 
             case 53:    // E-53
 
-                (void)printf("Unimplemented cycle: E-53\n");
+                (void)printf("Unused cycle: E-53\n");
                 runState = CHECK_STOP_STATE;
                 break;
 
             case 54:    // E-54
 
-                (void)printf("Unimplemented cycle: E-54\n");
+                (void)printf("Unused cycle: E-54\n");
                 runState = CHECK_STOP_STATE;
                 break;
 
             case 55:    // E-55
 
-                (void)printf("Unimplemented cycle: E-55\n");
+                (void)printf("Unused cycle: E-55\n");
                 runState = CHECK_STOP_STATE;
                 break;
 
-            case 56:    // I-1 (I/O wait)
+            case 56:    // E-56  <=  K
 
                 // End control instruction
                 EndIOInstruction();
@@ -2593,8 +4007,8 @@ void *Simulator(void *arg) {
 
             default:
 
-                // Bad cycle
-                (void)printf("Bad cycle: %d\n", cycle);
+                // Unused cycle
+                (void)printf("Unused cycle: %d\n", cycle);
                 runState = CHECK_STOP_STATE;
                 break;
 
@@ -2696,8 +4110,7 @@ static inline bool TestLiveSwitch(int sw) {
 static inline bool TestSwitch(int sw) {
     // Special handling for momentary switches
     if ((sw == RESET_SWITCH)   || (sw == DISPLAY_MAR_SWITCH) || (sw == SAVE_SWITCH)     || (sw == INSERT_SWITCH) ||
-        (sw == RELEASE_SWITCH) || (sw == START_SWITCH)       || (sw == STOP_SIE_SWITCH) ||
-        (sw == INSTANT_STOP_SCE_SWITCH)) {
+        (sw == RELEASE_SWITCH) || (sw == START_SWITCH)       || (sw == STOP_SIE_SWITCH) || (sw == INSTANT_STOP_SCE_SWITCH)) {
         if (inputs[sw]) {
             if (!lastSwitches[sw]) {
                 lastSwitches[sw] = TRUE;
@@ -2934,7 +4347,7 @@ static bool WritePairMemory(int marsId, int value, int align) {
 }
 
 static inline void ClearTriggers(void) {
-    (void)memset((void *)triggers, FALSE, sizeof(triggers));
+    (void)memset((void *)triggers, OFF, sizeof(triggers));
     SetTrigger(I_TIME_TRIGGER, ON);
     SetTrigger(INCR_TRIGGER, ON);
 }
