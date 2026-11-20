@@ -36,20 +36,17 @@ char *versionDate = (char*)__DATE__;
 bool alphaOpt = FALSE;
 bool displayMAROpt = FALSE;
 bool echoOpt = FALSE;
-bool flowOpt = FALSE;
-char *flowFilename = NULL;
-char *defaultFlowFilename = (char*)"execution_trace.txt";
-FILE *flowFile = NULL;
+bool fastOpt = FALSE;
 bool informationOpt = FALSE;
 bool logOpt = FALSE;
 char *logFilename = NULL;
 char *defaultLogFilename = (char*)"io_log.txt";
 FILE *logFile = NULL;
+bool modelOpt = FALSE;
 bool nodelayOpt = FALSE;
 bool protocolOpt = FALSE;
 bool stopsOpt = FALSE;
 bool timestampOpt = FALSE;
-bool unalignedOpt = FALSE;
 bool zeroOpt = FALSE;
 int cmemCount = 0;
 char *cmemFiles[NUM_CMEM_FILES] = {0};
@@ -73,6 +70,8 @@ char *programFiles[16] = {"PROGRAMS/APP_Power_Of_2.cmem",
 
 
 // =================================  Shared Data  =================================
+
+volatile int cpuModel = 1;
 
 volatile bool simulationRunning = FALSE;
 
@@ -198,6 +197,11 @@ const struct sabRegister initSABR =
 
 
 // =================================  Simulator Data  =================================
+
+int cycleTime = CYCLE_TIME_MODEL_1;
+int powerOnWait = POWER_ON_WAIT_MODEL_1;
+int tyIOCycleWait = TY_IO_CYCLE_WAIT_MODEL_1;
+int cdIOCycleWait = CD_IO_CYCLE_WAIT_MODEL_1;
 
 int cycle = 1;
 int lastCycle = 0;

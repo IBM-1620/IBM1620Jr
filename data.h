@@ -39,7 +39,7 @@ struct cycleCounts {
 };
 
 struct digit {
-    unsigned char check;    // parity bit not stored in simulated memory only set in registers
+    unsigned char check;  // parity bit not stored in simulated memory only set in registers
     unsigned char flag;
     unsigned char bit8;
     unsigned char bit4;
@@ -104,20 +104,17 @@ extern char *versionDate;
 extern bool alphaOpt;
 extern bool displayMAROpt;
 extern bool echoOpt;
-extern bool flowOpt;
-extern char *flowFilename;
-extern char *defaultFlowFilename;
-extern FILE *flowFile;
+extern bool fastOpt;
 extern bool informationOpt;
 extern bool logOpt;
 extern char *logFilename;
 extern char *defaultLogFilename;
 extern FILE *logFile;
+extern bool modelOpt;
 extern bool nodelayOpt;
 extern bool protocolOpt;
 extern bool stopsOpt;
 extern bool timestampOpt;
-extern bool unalignedOpt;
 extern bool zeroOpt;
 extern int cmemCount;
 extern char *cmemFiles[NUM_CMEM_FILES];
@@ -126,6 +123,9 @@ extern char *programFiles[16];
 
 
 // =================================  Shared Data  =================================
+
+// CPU Model
+extern volatile int cpuModel;
 
 // Simulation state
 extern volatile bool simulationRunning;
@@ -184,6 +184,11 @@ extern const struct sabRegister initSABR;
 
 
 // =================================  Simulator Data  =================================
+
+extern int cycleTime;
+extern int powerOnWait;
+extern int tyIOCycleWait;
+extern int cdIOCycleWait;
 
 extern int cycle;
 extern int lastCycle;

@@ -37,9 +37,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <sys/mman.h>
-#ifdef HARDWARE_TIMER
 #include <sys/syscall.h>
-#endif
 #include <sys/types.h>
 
 // Function declarations
@@ -112,16 +110,10 @@ void StopSimulator(void) {
 void *Simulator(void *arg) {
     int powerDelay = 0;
     long long syncTime = 0L;
-#ifdef HARDWARE_TIMER
     int timerFile = 0;
     char *timerFilename = (char*)"/dev/mem";
     void *timerMmap = NULL;
     volatile long long *counter = NULL;
-#else
-    int cycleCounter = CYCLE_COUNT;
-    struct timespec currentTime = { 0, 0L };
-    struct timespec sleepTime = { 0, 0L };
-#endif
     int temp = 0;
     int temp2 = 0;
     char chr = 0;
@@ -158,7 +150,6 @@ void *Simulator(void *arg) {
     powerState = POWER_OFF;
     InitializeSimulator();
 
-#ifdef HARDWARE_TIMER
     // Open the system timer
     timerFile = open(timerFilename, O_RDONLY);
     if (timerFile < 0) {
@@ -172,25 +163,8 @@ void *Simulator(void *arg) {
     }
     counter = (long long*)(timerMmap + BCM2835_COUNTER_OFFSET);
 
-// (void)printf("counter = %x\n", counter);
-// volatile int *tptr = timerMmap;
-// for (int i = 0; i < 7; ++i) {
-//     (void)printf("  %x\n", *tptr++);
-// }
-// long long stt = *counter;
-// for (int i = 0; i < 100; ++i) (void)syscall(SYS_gettid);
-// long long stp = *counter;
-// (void)printf("start = %lld\nstop  = %lld\n", stt, stp);
-
-#endif
-
     // Get sync time baseline
-#ifdef HARDWARE_TIMER
     syncTime = *counter;
-#else
-    (void)clock_gettime(CLOCK_MONOTONIC, &currentTime);
-    syncTime = 1000000000LL * currentTime.tv_sec + currentTime.tv_nsec;
-#endif
 
     while (simulationRunning) {
 
@@ -211,7 +185,32 @@ void *Simulator(void *arg) {
 
         // Special display mar setting
         if ((powerState == POWER_OFF) && TestSwitch(DISPLAY_MAR_SWITCH)) {
-            displayMAROpt = (displayMAROpt == FALSE) ? TRUE : FALSE;
+            displayMAROpt = !displayMAROpt;
+            (void)printf("Display MAR = %s\n", (displayMAROpt ? "TRUE" : "FALSE"));
+        }
+
+        // Special start setting
+        if ((powerState == POWER_OFF) && TestSwitch(START_SWITCH)) {
+            if (cpuModel == 1) {
+                cpuModel = 2;
+                cycleTime = CYCLE_TIME_MODEL_2;
+                powerOnWait = POWER_ON_WAIT_MODEL_2;
+                tyIOCycleWait = TY_IO_CYCLE_WAIT_MODEL_2;
+                cdIOCycleWait = CD_IO_CYCLE_WAIT_MODEL_2;
+            } else {
+                cpuModel = 1;
+                cycleTime = CYCLE_TIME_MODEL_1;
+                powerOnWait = POWER_ON_WAIT_MODEL_1;
+                tyIOCycleWait = TY_IO_CYCLE_WAIT_MODEL_1;
+                cdIOCycleWait = CD_IO_CYCLE_WAIT_MODEL_1;
+            }
+            (void)printf("Model = %d\n", cpuModel);
+        }
+
+        // Special instant stop setting
+        if ((powerState == POWER_OFF) && TestSwitch(INSTANT_STOP_SCE_SWITCH)) {
+            fastOpt = !fastOpt;
+            (void)printf("Fast = %s\n", (fastOpt ? "TRUE" : "FALSE"));
         }
 
         // Process emergency off power state
@@ -220,7 +219,7 @@ void *Simulator(void *arg) {
                 if (TestSwitch(POWER_SWITCH)) {
                     InitializeSimulator();
                     powerState = POWER_ON;
-                    powerDelay = (nodelayOpt ? 0 : POWER_ON_WAIT);
+                    powerDelay = (nodelayOpt ? 0 : powerOnWait);
                     SetLight(POWER_ON_LIGHT, ON);
                     WriteCDPowerStatus(CD_COMMAND_POWER_ON);
                     TimeLog("Power On");
@@ -245,7 +244,7 @@ void *Simulator(void *arg) {
             } else if (TestSwitch(POWER_SWITCH)) {
                 InitializeSimulator();
                 powerState = POWER_ON;
-                powerDelay = (nodelayOpt ? 0 : POWER_ON_WAIT);
+                powerDelay = (nodelayOpt ? 0 : powerOnWait);
                 SetLight(POWER_ON_LIGHT, ON);
                 WriteCDPowerStatus(CD_COMMAND_POWER_ON);
                 TimeLog("Power On");
@@ -963,7 +962,7 @@ void *Simulator(void *arg) {
                 }
 
                 // Set next cycle
-                if ((opr.value >= 0) && opCycles[opCode] != 0) {
+                if ((opr.value >= 0) && (opCycles[opCode] != 0)) {
                     if (((opCode == BI_OPCODE)  && !TestTrigger(BRCH_TRIGGER)) ||
                         ((opCode == BNI_OPCODE) && TestTrigger(BRCH_TRIGGER))) {
                         cycle = 1;
@@ -4045,27 +4044,16 @@ void *Simulator(void *arg) {
         }
 
         // Sync to cycle interval time
-#ifdef HARDWARE_TIMER
-        syncTime += CYCLE_TIME;
-        while (*counter < syncTime) {
-            (void)syscall(SYS_gettid);    // ~ 0.25usec (RPi3) system call
+        if (!fastOpt) {
+            syncTime += cycleTime;
+            while (*counter < syncTime) {
+                (void)syscall(SYS_gettid);    // ~ 0.25usec (RPi3) system call
+            }
         }
-#else
-        if (--cycleCounter == 0) {    // cannot sync every 20usec machine cycle due to 54usec (RPi3) overhead of
-                                      // clock_nanosleep()
-            cycleCounter = CYCLE_COUNT;
-            syncTime += CYCLE_COUNT * CYCLE_INTERVAL;
-            sleepTime.tv_sec = syncTime / 1000000000LL;
-            sleepTime.tv_nsec = syncTime % 1000000000LL;
-            (void)clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &sleepTime, NULL);
-        }
-#endif
     }
 
-#ifdef HARDWARE_TIMER
     (void)munmap(timerMmap, BCM2835_PAGE_SIZE);
     (void)close(timerFile);
-#endif
 
     // End simulator thread
     pthread_exit(NULL);

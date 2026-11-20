@@ -410,7 +410,7 @@ bool ReadCDAvail(void) {
 char ReadCDChar(void) {
     char achar = 0;
     (void)read(pcInPipe[0], &achar, 1);
-    SetIOWait(CD_IO_CYCLE_WAIT);
+    SetIOWait(cdIOCycleWait);
     return achar;
 }
 
@@ -422,7 +422,7 @@ void WriteCDCommand(char achar) {
 // Write output character
 void WriteCDChar(char achar) {
     (void)write(pcOutPipe[1], &achar, 1);
-    SetIOWait(CD_IO_CYCLE_WAIT);
+    SetIOWait(cdIOCycleWait);
 }
 
 // Write 1620 power status when changed

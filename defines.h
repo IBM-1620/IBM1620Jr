@@ -23,11 +23,7 @@
 // Simulator version
 
 #define SIM_VERSION_MAJOR 1
-#define SIM_VERSION_MINOR 1 
-
-// Compile options
-
-#define HARDWARE_TIMER  // use RPi hardware timer for simulator timing
+#define SIM_VERSION_MINOR 2 
 
 
 // =================================  Basic Defines  =================================
@@ -43,11 +39,9 @@
 #define NUM_PWMS  (NUM_9635 * NUM_BITS)
 #define NUM_GPIOS (NUM_9675 * NUM_BITS)
 
-#ifdef HARDWARE_TIMER
 #define BCM2835_PAGE_SIZE      4096
 #define BCM2835_SYSTEM_TIMER   0x3F003000
 #define BCM2835_COUNTER_OFFSET 0x4
-#endif
 
 // powerState values
 
@@ -164,6 +158,7 @@
 #define BTFL_OPCODE  7
 #define FSR_OPCODE   8
 #define FDIV_OPCODE  9
+#define BTAM_OPCODE 10  // Model 2
 #define AM_OPCODE   11
 #define SM_OPCODE   12
 #define MM_OPCODE   13
@@ -173,6 +168,7 @@
 #define BTM_OPCODE  17
 #define LDM_OPCODE  18
 #define DM_OPCODE   19
+#define BTA_OPCODE  20  // Model 2
 #define A_OPCODE    21
 #define S_OPCODE    22
 #define M_OPCODE    23
@@ -182,6 +178,7 @@
 #define BT_OPCODE   27
 #define LD_OPCODE   28
 #define D_OPCODE    29
+#define TRNM_OPCODE 30  // Model 2
 #define TR_OPCODE   31
 #define SF_OPCODE   32
 #define CF_OPCODE   33
@@ -201,9 +198,26 @@
 #define H_OPCODE    48
 #define B_OPCODE    49
 #define BNG_OPCODE  55
+#define BS_OPCODE   60  // Model 2
+#define BX_OPCODE   61  // Model 2
+#define BXM_OPCODE  62  // Model 2
+#define BCX_OPCODE  63  // Model 2
+#define BCXM_OPCODE 64  // Model 2
+#define BLX_OPCODE  65  // Model 2
+#define BLXM_OPCODE 66  // Model 2
+#define BSX_OPCODE  67  // Model 2
+#define MA_OPCODE   70  // Model 2
 #define MF_OPCODE   71
 #define TNS_OPCODE  72
 #define TNF_OPCODE  73
+#define BBT_OPCODE  90  // Model 2
+#define BMK_OPCODE  91  // Model 2
+#define ORF_OPCODE  92  // Model 2
+#define ANDF_OPCODE 93  // Model 2
+#define CPFL_OPCODE 94  // Model 2
+#define EORF_OPCODE 95  // Model 2
+#define OTD_OPCODE  96  // Model 2
+#define DTO_OPCODE  97  // Model 2
 
 // Branch indicators
 
@@ -250,22 +264,23 @@
 #define INVALID_14        0x0E
 #define GROUP_MARK        0x0F
 
-#ifdef HARDWARE_TIMER
-#define CYCLE_TIME        20          // machine cycle time (20usec)
-#else
-#define CYCLE_COUNT       10          // number of machine cycles between simulator time syncs
-#define CYCLE_INTERVAL    20000LL     // simulator time sync interval (20usec)
-#endif
+#define CYCLE_TIME_MODEL_1 20  // machine cycle time model 1 (20usec)
+#define CYCLE_TIME_MODEL_2 10  // machine cycle time model 2 (10usec)
+
 #define DISPLAY_INTERVAL  10000000LL  // display time sync interval (10msec)
 #define SCR_DISPLAY_DELAY 1000000LL   // scr display delay (1msec = (2-5 degrees)/360degrees * 100msec)
 
 #define RISE_DELTA 3   // how quickly lights can change brightness up
 #define FALL_DELTA 10  // how quickly lights can change brightness down
 
-#define CYCLES_PER_SEC    50000                  // number of machine cycles per second
-#define POWER_ON_WAIT     (20 * CYCLES_PER_SEC)  // time delay between power on and power ready (20sec)
-#define TY_IO_CYCLE_WAIT  5000                   // number of cpu cycles per typewriter character
-#define CD_IO_CYCLE_WAIT  1                      // number of cpu cycles per punched card character
+#define CYCLES_PER_SEC_MODEL_1    50000                          // number of machine cycles per second model 1
+#define CYCLES_PER_SEC_MODEL_2    100000                         // number of machine cycles per second model 2
+#define POWER_ON_WAIT_MODEL_1     (20 * CYCLES_PER_SEC_MODEL_1)  // time delay between power on and power ready model 1 (20sec)
+#define POWER_ON_WAIT_MODEL_2     (20 * CYCLES_PER_SEC_MODEL_2)  // time delay between power on and power ready model 2 (20sec)
+#define TY_IO_CYCLE_WAIT_MODEL_1  5000                           // number of cpu cycles per typewriter character model 1
+#define TY_IO_CYCLE_WAIT_MODEL_2  10000                          // number of cpu cycles per typewriter character model 2
+#define CD_IO_CYCLE_WAIT_MODEL_1  1                              // number of cpu cycles per punched card character model 1
+#define CD_IO_CYCLE_WAIT_MODEL_2  1                              // number of cpu cycles per punched card character model 2
 
 #define DB  10       // debounce interval (100msec)
 #define INF INT_MAX  // max debounce interval

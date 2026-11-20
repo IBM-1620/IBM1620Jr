@@ -17,6 +17,8 @@
 //
 //   Versions:
 //      1.0     06/09/2025     Initial version.
+//      1.1     11/17/2026     Added floating point instructions.
+//      1.2     11/19/2026     Added timing options.
 //
 //======================================================================================================================
 
@@ -122,14 +124,14 @@ static void ParseCommandLine(int argc, char *argv[], char *defaultCmemFilename, 
         { { "alphamemory",       no_argument,       NULL, 'a' },
           { "displaymar",        no_argument,       NULL, 'd' },
           { "echo",              no_argument,       NULL, 'e' },
-          { "flow",              optional_argument, NULL, 'f' },
+          { "fast",              no_argument,       NULL, 'f' },
           { "information",       no_argument,       NULL, 'i' },
           { "log",               optional_argument, NULL, 'l' },
+          { "model",             required_argument, NULL, 'm' },
           { "nodelay",           no_argument,       NULL, 'n' },
           { "protocol",          no_argument,       NULL, 'p' },
           { "stops",             required_argument, NULL, 's' },
           { "timestamp",         no_argument,       NULL, 't' },
-          { "unaligned",         no_argument,       NULL, 'u' },
           { "zeromemory",        no_argument,       NULL, 'z' },
           { 0, 0, 0, 0 } };
 
@@ -137,7 +139,7 @@ static void ParseCommandLine(int argc, char *argv[], char *defaultCmemFilename, 
     while (TRUE) {
         int optIndex = 0;
 
-        opt = getopt_long(argc, argv, "adef::il::nps:tuvwz", cmdOptions, &optIndex);
+        opt = getopt_long(argc, argv, "adefil::m:nps:tz", cmdOptions, &optIndex);
         if (opt == EOF) break;
 
         switch (opt) {
@@ -155,13 +157,7 @@ static void ParseCommandLine(int argc, char *argv[], char *defaultCmemFilename, 
                 break;
 
             case 'f':
-                flowOpt = TRUE;
-                // TBD - implement flow trace
-                if (optarg != NULL) {
-                    flowFilename = optarg;
-                } else {
-                    flowFilename = defaultFlowFilename;
-                }
+                fastOpt = TRUE;
                 break;
 
             case 'i':
@@ -174,6 +170,30 @@ static void ParseCommandLine(int argc, char *argv[], char *defaultCmemFilename, 
                     logFilename = optarg;
                 } else {
                     logFilename = defaultLogFilename;
+                }
+                break;
+
+            case 'm':
+                modelOpt = TRUE;
+                if (*optarg == '1') {
+                    cpuModel = 1;
+                    cycleTime = CYCLE_TIME_MODEL_1;
+                    powerOnWait = POWER_ON_WAIT_MODEL_1;
+                    tyIOCycleWait = TY_IO_CYCLE_WAIT_MODEL_1;
+                    cdIOCycleWait = CD_IO_CYCLE_WAIT_MODEL_1;
+                } else if (*optarg == '2') {
+                    cpuModel = 2;
+                    cycleTime = CYCLE_TIME_MODEL_2;
+                    powerOnWait = POWER_ON_WAIT_MODEL_2;
+                    tyIOCycleWait = TY_IO_CYCLE_WAIT_MODEL_2;
+                    cdIOCycleWait = CD_IO_CYCLE_WAIT_MODEL_2;
+                } else {
+                    printf("Invalid model number: %s\n", optarg);
+                    cpuModel = 1;
+                    cycleTime = CYCLE_TIME_MODEL_1;
+                    powerOnWait = POWER_ON_WAIT_MODEL_1;
+                    tyIOCycleWait = TY_IO_CYCLE_WAIT_MODEL_1;
+                    cdIOCycleWait = CD_IO_CYCLE_WAIT_MODEL_1;
                 }
                 break;
 
@@ -194,11 +214,6 @@ static void ParseCommandLine(int argc, char *argv[], char *defaultCmemFilename, 
                 timestampOpt = TRUE;
                 break;
 
-            case 'u':
-                unalignedOpt = TRUE;
-                // TBD - implement unaligned
-                break;
-
             case 'z':
                 zeroOpt = TRUE;
                 break;
@@ -208,14 +223,14 @@ static void ParseCommandLine(int argc, char *argv[], char *defaultCmemFilename, 
                 (void)printf("    -a    --alphamemory          include alpha interpretation in saved core memory file\n");
                 (void)printf("    -d    --displaymar           allow display mar in any stopped state\n");
                 (void)printf("    -e    --echo                 echo console typewriter input & output\n");
-                (void)printf("    -f    --flow=filename        trace execution flow\n");
+                (void)printf("    -f    --fast                 cycles run as fast as possible\n");
                 (void)printf("    -i    --information          print simulator information\n");
                 (void)printf("    -l    --log=filename         log console typewriter & card reader/punch input & output\n");
+                (void)printf("    -m    --model=number         ibm 1620 model number\n");
                 (void)printf("    -n    --nodelay              no delay in power on\n");
                 (void)printf("    -p    --protocol             trace console typewriter & card reader/punch protocols\n");
                 (void)printf("    -s    --stops=n,n,..         set console typewriter tab stops\n");
                 (void)printf("    -t    --timestamp            print a timestamp for all run state changes\n");
-                (void)printf("    -u    --unaligned            unaligned read/write alphameric mbr check\n");
                 (void)printf("    -z    --zeromemory           start with zeroed memory\n");
                 (void)printf("    filename(s)                  core memory file(s) to preload\n");
                 break;
